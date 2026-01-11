@@ -11,5 +11,12 @@ config_version=5
 [application]
 
 config/name="Deep State"
+run/main_scene="uid://dn6uxe3ujqcvu"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
+
+[display]
+
+window/size/viewport_width=3840
+window/size/viewport_height=2160
+window/stretch/mode="canvas_items"

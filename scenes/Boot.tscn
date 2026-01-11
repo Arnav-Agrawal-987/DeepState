@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3 uid="uid://dn6uxe3ujqcvu"]
+
+[ext_resource type="PackedScene" uid="uid://b8jpeuyfh5pyr" path="res://scenes/Menu.tscn" id="1_f6jgv"]
+[ext_resource type="PackedScene" uid="uid://cfwe2xl0nw3sq" path="res://scenes/DeepStateGame.tscn" id="2_wfhjv"]
+
+[node name="Boot" type="Node"]
+
+[node name="Menu" parent="." instance=ExtResource("1_f6jgv")]
+
+[node name="GameRoot" parent="." instance=ExtResource("2_wfhjv")]

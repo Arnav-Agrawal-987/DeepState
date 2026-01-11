@@ -1,0 +1,227 @@
+[gd_scene load_steps=15 format=3 uid="uid://b8jpeuyfh5pyr"]
+
+[ext_resource type="Texture2D" uid="uid://bc8x1eh8732gv" path="res://assets/sprites/bg.png" id="1_11y2r"]
+[ext_resource type="FontFile" uid="uid://pm8iqdivvpeu" path="res://assets/fonts/TopSecret.TTF" id="1_xdvgc"]
+[ext_resource type="Script" uid="uid://b0arnti4u17x4" path="res://scripts/menu_control.gd" id="2_aaywf"]
+[ext_resource type="FontFile" uid="uid://dq5y486tpevre" path="res://assets/fonts/Tektur.TTF" id="2_upctu"]
+[ext_resource type="FontFile" uid="uid://bryscikwd1e8r" path="res://assets/fonts/Stencil.TTF" id="4_jmdev"]
+[ext_resource type="Texture2D" uid="uid://b4riuncqy4he" path="res://assets/sprites/button.png" id="5_b6cxs"]
+[ext_resource type="Texture2D" uid="uid://dvf0xjuqxpm5g" path="res://assets/sprites/button_pressed.png" id="6_aaywf"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_o0tnf"]
+content_margin_top = 30.0
+texture = ExtResource("5_b6cxs")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_jmdev"]
+content_margin_top = 60.0
+texture = ExtResource("6_aaywf")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_b6cxs"]
+content_margin_top = 20.0
+texture = ExtResource("5_b6cxs")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_aaywf"]
+texture = ExtResource("5_b6cxs")
+draw_center = false
+
+[sub_resource type="Animation" id="Animation_b6cxs"]
+length = 0.001
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MenuControl:modulate:a")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(1, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0)
+}
+tracks/1/type = "bezier"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("MenuControl:scale:x")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(1, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0)
+}
+tracks/2/type = "bezier"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("MenuControl:scale:y")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(1, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0)
+}
+
+[sub_resource type="Animation" id="Animation_aaywf"]
+resource_name = "fade_out"
+length = 0.5
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MenuControl:modulate:a")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0, 2),
+"points": PackedFloat32Array(1, -0.25, 0, 0.25, 0, 0, -0.083333336, 0.16666667, 0, 0),
+"times": PackedFloat32Array(0, 0.5)
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_1abgu"]
+_data = {
+&"RESET": SubResource("Animation_b6cxs"),
+&"fade_out": SubResource("Animation_aaywf")
+}
+
+[node name="Menu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MenuUI" type="CanvasLayer" parent="."]
+
+[node name="TextureRect" type="TextureRect" parent="MenuUI"]
+z_index = -1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -1920.0
+offset_top = -1080.0
+offset_right = 1920.0
+offset_bottom = 1080.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("1_11y2r")
+
+[node name="MenuControl" type="Control" parent="MenuUI"]
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_aaywf")
+
+[node name="Title" type="Label" parent="MenuUI/MenuControl"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -1233.0
+offset_top = -739.0
+offset_right = 1225.0
+offset_bottom = -19.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 4
+mouse_filter = 0
+theme_override_fonts/font = ExtResource("1_xdvgc")
+theme_override_font_sizes/font_size = 400
+text = "DEEP STATE"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Subtitle" type="Label" parent="MenuUI/MenuControl"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -1164.0
+offset_top = -47.0
+offset_right = 1164.0
+offset_bottom = 47.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_fonts/font = ExtResource("2_upctu")
+theme_override_font_sizes/font_size = 72
+text = "Power is what happens when nobody noticed who made it happen"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Button" type="Button" parent="MenuUI/MenuControl"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -376.0
+offset_top = 263.0
+offset_right = 376.0
+offset_bottom = 581.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("4_jmdev")
+theme_override_font_sizes/font_size = 196
+theme_override_styles/normal = SubResource("StyleBoxTexture_o0tnf")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_jmdev")
+theme_override_styles/hover = SubResource("StyleBoxTexture_b6cxs")
+theme_override_styles/focus = SubResource("StyleBoxTexture_aaywf")
+text = "PLAY"
+icon_alignment = 1
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="MenuUI/MenuControl"]
+root_node = NodePath("../..")
+libraries = {
+&"": SubResource("AnimationLibrary_1abgu")
+}
+
+[node name="WorldMapView" type="Node2D" parent="."]
+visible = false
+
+[node name="WorldMap" type="Sprite2D" parent="WorldMapView"]
+
+[node name="StateHitboxes" type="Node2D" parent="WorldMapView"]
+
+[node name="State1" type="Area2D" parent="WorldMapView/StateHitboxes"]
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="WorldMapView/StateHitboxes/State1"]
+
+[node name="State1Highlight" type="Sprite2D" parent="WorldMapView/StateHitboxes/State1"]
+
+[node name="State2" type="Area2D" parent="WorldMapView/StateHitboxes"]
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="WorldMapView/StateHitboxes/State2"]
+
+[node name="State2Highlight" type="Sprite2D" parent="WorldMapView/StateHitboxes/State2"]
+
+[node name="State3" type="Area2D" parent="WorldMapView/StateHitboxes"]
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="WorldMapView/StateHitboxes/State3"]
+
+[node name="State3Highlight" type="Sprite2D" parent="WorldMapView/StateHitboxes/State3"]
+
+[node name="State4" type="Area2D" parent="WorldMapView/StateHitboxes"]
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="WorldMapView/StateHitboxes/State4"]
+
+[node name="State4Highlight" type="Sprite2D" parent="WorldMapView/StateHitboxes/State4"]
+
+[connection signal="pressed" from="MenuUI/MenuControl/Button" to="MenuUI/MenuControl" method="_on_button_pressed"]

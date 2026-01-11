@@ -1,0 +1,73 @@
+[gd_scene format=3 uid="uid://cfwe2xl0nw3sq"]
+
+[node name="GameRoot" type="Node2D"]
+
+[node name="GameState" type="Node2D" parent="."]
+
+[node name="WorldContext" type="Node2D" parent="GameState"]
+
+[node name="SimulationClock" type="Node2D" parent="GameState"]
+
+[node name="PlayerState" type="Node2D" parent="GameState"]
+
+[node name="InstitutionManager" type="Node2D" parent="GameState"]
+
+[node name="MilitaryInstitution" type="Node2D" parent="GameState/InstitutionManager"]
+
+[node name="SelfMinorEventManager" type="Node2D" parent="GameState/InstitutionManager/MilitaryInstitution"]
+
+[node name="PlayerMinorEventManager" type="Node2D" parent="GameState/InstitutionManager/MilitaryInstitution"]
+
+[node name="DependencyGraph" type="Node2D" parent="GameState"]
+
+[node name="MajorEventManager" type="Node2D" parent="GameState"]
+
+[node name="TensionManager" type="Node2D" parent="GameState"]
+
+[node name="WorldView" type="Node2D" parent="."]
+
+[node name="Map" type="Sprite2D" parent="WorldView"]
+
+[node name="InstitutionIcons" type="Node2D" parent="WorldView"]
+
+[node name="MilitaryIcon" type="Sprite2D" parent="WorldView/InstitutionIcons"]
+
+[node name="DependencyOverlay" type="Node2D" parent="WorldView"]
+
+[node name="DependencyLines" type="Line2D" parent="WorldView/DependencyOverlay"]
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="MainHUD" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="PlayerPanel" type="Control" parent="UI/MainHUD"]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="InstitutionPanel" type="Control" parent="UI/MainHUD"]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="EventPanel" type="Control" parent="UI/MainHUD"]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="TensionMeter" type="Control" parent="UI/MainHUD"]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="DayControls" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="SaveLoadManager" type="Node2D" parent="."]
