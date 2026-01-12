@@ -21,140 +21,423 @@ script = ExtResource("1_q1p4u")
 
 [node name="SimulationUI" type="CanvasLayer" parent="."]
 
-[node name="PlayerDashboard" type="Control" parent="SimulationUI"]
+[node name="MainLayout" type="Control" parent="SimulationUI"]
 layout_mode = 3
-anchors_preset = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/PlayerDashboard"]
+[node name="Background" type="ColorRect" parent="SimulationUI/MainLayout"]
 layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.08, 0.08, 0.12, 1)
 
-[node name="HBoxContainer" type="HBoxContainer" parent="SimulationUI/PlayerDashboard/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="SimulationUI/MainLayout"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="MainVBox" type="VBoxContainer" parent="SimulationUI/MainLayout/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PlayerDashboard" type="PanelContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox"]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="SimulationUI/PlayerDashboard/VBoxContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard"]
 layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="HBoxContainer" type="HBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="Label" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
 text = "Day: 1"
 
-[node name="CashLabel" type="Label" parent="SimulationUI/PlayerDashboard/VBoxContainer/HBoxContainer"]
+[node name="CashLabel" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 text = "Cash: $1000"
 
-[node name="BandwidthLabel" type="Label" parent="SimulationUI/PlayerDashboard/VBoxContainer/HBoxContainer"]
+[node name="BandwidthLabel" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 text = "Bandwidth: 50/100"
 
-[node name="ExposureLabel" type="Label" parent="SimulationUI/PlayerDashboard/VBoxContainer/HBoxContainer"]
+[node name="ExposureLabel" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 text = "Exposure: 0%"
 
-[node name="TensionBar" type="ProgressBar" parent="SimulationUI/PlayerDashboard/VBoxContainer"]
-layout_mode = 2
-
-[node name="InstitutionPanel" type="Control" parent="SimulationUI"]
-layout_mode = 3
-anchors_preset = 0
-
-[node name="ScrollContainer" type="ScrollContainer" parent="SimulationUI/InstitutionPanel"]
-layout_mode = 1
-
-[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/InstitutionPanel/ScrollContainer"]
+[node name="Spacer" type="Control" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
+
+[node name="MenuButton" type="Button" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "Menu"
+
+[node name="TensionHBox" type="HBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TensionLabel" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/TensionHBox"]
+layout_mode = 2
+text = "Tension:"
+
+[node name="TensionBar" type="ProgressBar" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/TensionHBox"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ContentHSplit" type="HSplitContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+split_offset = -350
+
+[node name="LeftPanel" type="VBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="InstitutionLabel" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/LeftPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Institutions"
+
+[node name="InstitutionPanel" type="PanelContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/LeftPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ScrollContainer" type="ScrollContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/LeftPanel/InstitutionPanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/LeftPanel/InstitutionPanel/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="RightPanel" type="VBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit"]
+custom_minimum_size = Vector2(350, 0)
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="EventTreeLabel" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Event Tree"
+
+[node name="TreeTypeHBox" type="HBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel"]
+layout_mode = 2
+
+[node name="InstitutionSelect" type="OptionButton" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/TreeTypeHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TreeTypeSelect" type="OptionButton" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/TreeTypeHBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="EventTreePanel" type="PanelContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="EventTreeScroll" type="ScrollContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/EventTreePanel"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="EventTree" type="Tree" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/EventTreePanel/EventTreeScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+hide_root = true
+
+[node name="DebugPanel" type="PanelContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox"]
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="DebugLabel" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "DEBUG CONTROLS"
+
+[node name="ButtonRow1" type="HBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="AdvanceDayBtn" type="Button" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ButtonRow1"]
+custom_minimum_size = Vector2(120, 35)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Advance Day"
+
+[node name="AddStressBtn" type="Button" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ButtonRow1"]
+custom_minimum_size = Vector2(120, 35)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Add Stress"
+
+[node name="AddTensionBtn" type="Button" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ButtonRow1"]
+custom_minimum_size = Vector2(120, 35)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Add Tension"
+
+[node name="TriggerCrisisBtn" type="Button" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ButtonRow1"]
+custom_minimum_size = Vector2(120, 35)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Trigger Crisis"
+
+[node name="ButtonRow2" type="HBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="AddCashBtn" type="Button" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ButtonRow2"]
+custom_minimum_size = Vector2(120, 35)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Add Cash"
+
+[node name="AddBandwidthBtn" type="Button" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ButtonRow2"]
+custom_minimum_size = Vector2(120, 35)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Add Bandwidth"
+
+[node name="AddInfluenceBtn" type="Button" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ButtonRow2"]
+custom_minimum_size = Vector2(120, 35)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Add Influence"
+
+[node name="TestEventBtn" type="Button" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ButtonRow2"]
+custom_minimum_size = Vector2(120, 35)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Test Event"
+
+[node name="ConsoleLabel" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.8, 0.6, 1)
+text = "Ready"
 
 [node name="EventDialog" type="Control" parent="SimulationUI"]
 visible = false
 layout_mode = 3
-anchors_preset = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="PanelContainer" type="PanelContainer" parent="SimulationUI/EventDialog"]
+[node name="DimBackground" type="ColorRect" parent="SimulationUI/EventDialog"]
 layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.7)
 
-[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/EventDialog/PanelContainer"]
+[node name="CenterContainer" type="CenterContainer" parent="SimulationUI/EventDialog"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="PanelContainer" type="PanelContainer" parent="SimulationUI/EventDialog/CenterContainer"]
+custom_minimum_size = Vector2(500, 300)
 layout_mode = 2
 
-[node name="TitleLabel" type="Label" parent="SimulationUI/EventDialog/PanelContainer/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="SimulationUI/EventDialog/CenterContainer/PanelContainer"]
 layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/EventDialog/CenterContainer/PanelContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="TitleLabel" type="Label" parent="SimulationUI/EventDialog/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
 text = "Event Title"
+horizontal_alignment = 1
 
-[node name="DescriptionLabel" type="Label" parent="SimulationUI/EventDialog/PanelContainer/VBoxContainer"]
+[node name="DescriptionLabel" type="Label" parent="SimulationUI/EventDialog/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "Event Description"
-text_overrun_behavior = 3
+text = "Event Description goes here. This can be multiple lines describing what happened and what choices the player has."
+autowrap_mode = 2
 
-[node name="ChoicesContainer" type="VBoxContainer" parent="SimulationUI/EventDialog/PanelContainer/VBoxContainer"]
+[node name="EffectsLabel" type="Label" parent="SimulationUI/EventDialog/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.7, 1, 1)
+text = ""
+
+[node name="Separator" type="HSeparator" parent="SimulationUI/EventDialog/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="ChoicesLabel" type="Label" parent="SimulationUI/EventDialog/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Choose your response:"
+
+[node name="ChoicesContainer" type="VBoxContainer" parent="SimulationUI/EventDialog/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="CloseButton" type="Button" parent="SimulationUI/EventDialog/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Continue"
 
 [node name="CrisisOverlay" type="Control" parent="SimulationUI"]
 visible = false
 layout_mode = 3
-anchors_preset = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="ColorRect" type="ColorRect" parent="SimulationUI/CrisisOverlay"]
 layout_mode = 1
-color = Color(0, 0, 0, 0.7)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.3, 0, 0, 0.8)
 
-[node name="CrisisPanel" type="PanelContainer" parent="SimulationUI/CrisisOverlay"]
+[node name="CenterContainer" type="CenterContainer" parent="SimulationUI/CrisisOverlay"]
 layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/CrisisOverlay/CrisisPanel"]
+[node name="CrisisPanel" type="PanelContainer" parent="SimulationUI/CrisisOverlay/CenterContainer"]
+custom_minimum_size = Vector2(550, 350)
 layout_mode = 2
 
-[node name="CrisisTitle" type="Label" parent="SimulationUI/CrisisOverlay/CrisisPanel/VBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="SimulationUI/CrisisOverlay/CenterContainer/CrisisPanel"]
 layout_mode = 2
-text = "CRISIS"
+theme_override_constants/margin_left = 25
+theme_override_constants/margin_top = 25
+theme_override_constants/margin_right = 25
+theme_override_constants/margin_bottom = 25
 
-[node name="CrisisDescription" type="Label" parent="SimulationUI/CrisisOverlay/CrisisPanel/VBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/CrisisOverlay/CenterContainer/CrisisPanel/MarginContainer"]
 layout_mode = 2
-text = "A crisis has occurred"
-text_overrun_behavior = 3
+theme_override_constants/separation = 15
 
-[node name="DebugPanel" type="PanelContainer" parent="SimulationUI"]
-
-[node name="MarginContainer" type="MarginContainer" parent="SimulationUI/DebugPanel"]
+[node name="CrisisTitle" type="Label" parent="SimulationUI/CrisisOverlay/CenterContainer/CrisisPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/margin_left = 5
-theme_override_constants/margin_top = 5
-theme_override_constants/margin_right = 5
-theme_override_constants/margin_bottom = 5
+theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
+theme_override_font_sizes/font_size = 28
+text = "⚠ CRISIS ⚠"
+horizontal_alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="SimulationUI/DebugPanel/MarginContainer"]
+[node name="CrisisDescription" type="Label" parent="SimulationUI/CrisisOverlay/CenterContainer/CrisisPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "A major crisis has erupted! The stability of the region is at stake."
+autowrap_mode = 2
+horizontal_alignment = 1
+
+[node name="CrisisEffects" type="Label" parent="SimulationUI/CrisisOverlay/CenterContainer/CrisisPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.7, 0.3, 1)
+text = ""
+horizontal_alignment = 1
+
+[node name="Separator" type="HSeparator" parent="SimulationUI/CrisisOverlay/CenterContainer/CrisisPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 
-[node name="DebugLabel" type="Label" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+[node name="CrisisChoicesLabel" type="Label" parent="SimulationUI/CrisisOverlay/CenterContainer/CrisisPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "DEBUG:"
+text = "How will you respond?"
+horizontal_alignment = 1
 
-[node name="AdvanceDayBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+[node name="CrisisChoicesContainer" type="VBoxContainer" parent="SimulationUI/CrisisOverlay/CenterContainer/CrisisPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "Advance Day"
+theme_override_constants/separation = 10
 
-[node name="AddStressBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+[node name="PauseMenu" type="Control" parent="SimulationUI"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DimBackground" type="ColorRect" parent="SimulationUI/PauseMenu"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 0.6)
+
+[node name="CenterContainer" type="CenterContainer" parent="SimulationUI/PauseMenu"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="PanelContainer" type="PanelContainer" parent="SimulationUI/PauseMenu/CenterContainer"]
+custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-text = "Add Stress"
 
-[node name="AddTensionBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+[node name="MarginContainer" type="MarginContainer" parent="SimulationUI/PauseMenu/CenterContainer/PanelContainer"]
 layout_mode = 2
-text = "Add Tension"
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
 
-[node name="TriggerCrisisBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/PauseMenu/CenterContainer/PanelContainer/MarginContainer"]
 layout_mode = 2
-text = "Trigger Crisis"
+theme_override_constants/separation = 15
 
-[node name="AddCashBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+[node name="PauseTitle" type="Label" parent="SimulationUI/PauseMenu/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "Add Cash"
+theme_override_font_sizes/font_size = 24
+text = "PAUSED"
+horizontal_alignment = 1
 
-[node name="AddBandwidthBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+[node name="ResumeBtn" type="Button" parent="SimulationUI/PauseMenu/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
-text = "Add Bandwidth"
+text = "Resume"
 
-[node name="AddInfluenceBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+[node name="SaveBtn" type="Button" parent="SimulationUI/PauseMenu/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
-text = "Add Influence"
+text = "Save Game"
 
-[node name="TestEventBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+[node name="MainMenuBtn" type="Button" parent="SimulationUI/PauseMenu/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
-text = "Test Event"
+text = "Main Menu"
 
-[node name="ConsoleLabel" type="Label" parent="SimulationUI"]
-text = "Ready"
+[node name="QuitBtn" type="Button" parent="SimulationUI/PauseMenu/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "Quit Game"

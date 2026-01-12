@@ -1,0 +1,68 @@
+[gd_resource type="Resource" script_class="InstitutionConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/data/institution_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+institution_id = "govt"
+institution_name = "National Assembly"
+institution_type = 2
+initial_capacity = 55.0
+initial_strength = 90.0
+initial_stress = 5.0
+initial_influence = 0.0
+player_event_tree = [{
+"node_id": "action_light",
+"title": "Lobby Backbenchers",
+"description": "Apply subtle pressure through unofficial legislative channels.",
+"conditions": {"min_influence": 10.0, "max_stress": 90.0},
+"cost": {"cash": 250.0, "bandwidth": 10.0},
+"effects": {"stress_change": 12.0, "influence_change": 4.0, "exposure_change": 3.0, "tension_change": 3.0}
+}, {
+"node_id": "action_moderate",
+"title": "Manipulate Committees",
+"description": "Control key committee appointments and agendas.",
+"conditions": {"min_influence": 30.0, "max_stress": 80.0},
+"cost": {"cash": 600.0, "bandwidth": 20.0},
+"effects": {"stress_change": 22.0, "influence_change": 7.0, "exposure_change": 6.0, "tension_change": 5.0}
+}, {
+"node_id": "action_heavy",
+"title": "Blackmail Officials",
+"description": "Use compromising information against key legislators.",
+"conditions": {"min_influence": 60.0},
+"cost": {"cash": 1200.0, "bandwidth": 35.0},
+"effects": {"stress_change": 35.0, "influence_change": 12.0, "capacity_change": -8.0, "exposure_change": 12.0, "tension_change": 10.0}
+}, {
+"node_id": "action_deep",
+"title": "Constitutional Manipulation",
+"description": "Engineer fundamental changes to legislative procedures.",
+"conditions": {"min_influence": 80.0},
+"cost": {"cash": 2500.0, "bandwidth": 50.0},
+"effects": {"stress_change": 50.0, "influence_change": 18.0, "capacity_change": -15.0, "exposure_change": 22.0, "tension_change": 18.0}
+}]
+autonomous_event_tree = [{
+"node_id": "stress_coalition_collapse",
+"trigger_type": "stress",
+"title": "Coalition Fracture",
+"description": "The governing coalition is fragmenting over policy disagreements.",
+"conditions": {"min_stress": 75.0},
+"auto_effects": {"stress_change": -18.0, "tension_change": 10.0},
+"player_choices": [{"text": "Back the opposition faction", "requires": {"min_influence": 35.0}, "cost": {"cash": 400.0, "bandwidth": 18.0}, "effects": {"influence_change": 14.0, "exposure_change": 10.0}}, {"text": "Remain neutral", "effects": {"tension_change": 4.0}}]
+}, {
+"node_id": "stress_scandal",
+"trigger_type": "stress",
+"title": "Corruption Scandal",
+"description": "Financial irregularities have been exposed in legislative budgets.",
+"conditions": {"min_stress": 85.0},
+"auto_effects": {"stress_change": -12.0, "capacity_change": -6.0, "tension_change": 14.0},
+"player_choices": [{"text": "Leak more documents", "requires": {"min_influence": 45.0}, "cost": {"cash": 300.0}, "effects": {"stress_change": 20.0, "influence_change": 8.0, "exposure_change": 15.0}}, {"text": "Help cover it up", "requires": {"min_influence": 50.0}, "cost": {"cash": 800.0}, "effects": {"influence_change": 15.0, "stress_change": -15.0, "exposure_change": 8.0}}, {"text": "Observe", "effects": {}}]
+}, {
+"node_id": "stable_reform",
+"trigger_type": "stable",
+"title": "Electoral Reform",
+"description": "There is momentum for electoral system reforms.",
+"conditions": {"max_stress": 35.0, "min_capacity": 50.0},
+"probability": 0.25,
+"auto_effects": {"capacity_change": 4.0, "strength_change": 3.0},
+"player_choices": [{"text": "Undermine reform efforts", "requires": {"min_influence": 45.0}, "cost": {"cash": 600.0, "bandwidth": 22.0}, "effects": {"stress_change": 28.0, "capacity_change": -10.0, "exposure_change": 12.0}}, {"text": "Let reforms proceed", "effects": {"influence_change": -4.0}}]
+}]

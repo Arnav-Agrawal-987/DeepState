@@ -1,0 +1,172 @@
+[gd_scene load_steps=2 format=3 uid="uid://dvt7enevtview"]
+
+[ext_resource type="Script" path="res://src/ui/event_tree_viewer.gd" id="1_viewer"]
+
+[node name="EventTreeViewer" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_viewer")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.06, 0.06, 0.1, 1)
+
+[node name="MainContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MainContainer"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="Header" type="HBoxContainer" parent="MainContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="TitleLabel" type="Label" parent="MainContainer/VBoxContainer/Header"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Event Tree Viewer"
+
+[node name="Spacer" type="Control" parent="MainContainer/VBoxContainer/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="BackButton" type="Button" parent="MainContainer/VBoxContainer/Header"]
+custom_minimum_size = Vector2(120, 35)
+layout_mode = 2
+text = "< Back"
+
+[node name="ContentSplit" type="HSplitContainer" parent="MainContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+split_offset = 250
+
+[node name="LeftPanel" type="PanelContainer" parent="MainContainer/VBoxContainer/ContentSplit"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MainContainer/VBoxContainer/ContentSplit/LeftPanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="InstitutionLabel" type="Label" parent="MainContainer/VBoxContainer/ContentSplit/LeftPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Institutions"
+
+[node name="InstitutionList" type="ItemList" parent="MainContainer/VBoxContainer/ContentSplit/LeftPanel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="TreeTypeLabel" type="Label" parent="MainContainer/VBoxContainer/ContentSplit/LeftPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Tree Type"
+
+[node name="TreeTypeOption" type="OptionButton" parent="MainContainer/VBoxContainer/ContentSplit/LeftPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="RightPanel" type="PanelContainer" parent="MainContainer/VBoxContainer/ContentSplit"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MarginContainer" type="MarginContainer" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="VSplitContainer" type="VSplitContainer" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer"]
+layout_mode = 2
+split_offset = 300
+
+[node name="TreeView" type="VBoxContainer" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="TreeLabel" type="Label" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer/TreeView"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Event Tree"
+
+[node name="TreeScroll" type="ScrollContainer" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer/TreeView"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="EventTree" type="Tree" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer/TreeView/TreeScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+hide_root = true
+
+[node name="DetailsPanel" type="VBoxContainer" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DetailsLabel" type="Label" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer/DetailsPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Node Details"
+
+[node name="DetailsScroll" type="ScrollContainer" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer/DetailsPanel"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DetailsContainer" type="VBoxContainer" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer/DetailsPanel/DetailsScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="NodeTitle" type="Label" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer/DetailsPanel/DetailsScroll/DetailsContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Select an event node"
+
+[node name="NodeDescription" type="Label" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer/DetailsPanel/DetailsScroll/DetailsContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.7, 0.8, 1)
+text = ""
+autowrap_mode = 2
+
+[node name="ConditionsLabel" type="Label" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer/DetailsPanel/DetailsScroll/DetailsContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.8, 0.5, 1)
+text = ""
+
+[node name="CostLabel" type="Label" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer/DetailsPanel/DetailsScroll/DetailsContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.7, 0.3, 1)
+text = ""
+
+[node name="EffectsLabel" type="Label" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer/DetailsPanel/DetailsScroll/DetailsContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.5, 0.7, 1, 1)
+text = ""
+
+[node name="ChoicesLabel" type="Label" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer/DetailsPanel/DetailsScroll/DetailsContainer"]
+layout_mode = 2
+text = ""
+
+[node name="ChoicesContainer" type="VBoxContainer" parent="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer/DetailsPanel/DetailsScroll/DetailsContainer"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[connection signal="pressed" from="MainContainer/VBoxContainer/Header/BackButton" to="." method="_on_back_pressed"]
+[connection signal="item_selected" from="MainContainer/VBoxContainer/ContentSplit/LeftPanel/VBoxContainer/InstitutionList" to="." method="_on_institution_selected"]
+[connection signal="item_selected" from="MainContainer/VBoxContainer/ContentSplit/LeftPanel/VBoxContainer/TreeTypeOption" to="." method="_on_tree_type_selected"]
+[connection signal="item_selected" from="MainContainer/VBoxContainer/ContentSplit/RightPanel/MarginContainer/VSplitContainer/TreeView/TreeScroll/EventTree" to="." method="_on_event_node_selected"]

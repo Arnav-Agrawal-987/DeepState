@@ -11,5 +11,6 @@ config_version=5
 [application]
 
 config/name="DeepState"
+run/main_scene="uid://cx0y0ia5oy5e"
 config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"

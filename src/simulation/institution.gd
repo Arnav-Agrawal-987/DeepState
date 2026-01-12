@@ -10,6 +10,7 @@ signal stress_changed(new_stress: float)
 signal capacity_changed(new_capacity: float)
 signal influence_changed(new_influence: float)
 signal strength_changed(new_strength: float)
+signal stress_maxed_out()  # Emitted when stress reaches 100%
 
 @export var institution_id: String = ""
 @export var institution_name: String = ""
@@ -40,8 +41,13 @@ func daily_auto_update() -> void:
 
 ## Apply stress to institution
 func apply_stress(amount: float) -> void:
+	var old_stress = stress
 	stress = min(stress + amount, strength * 2.0)  # Cap at 2x strength
 	stress_changed.emit(stress)
+	
+	# Check if stress just reached 100% (strength threshold)
+	if old_stress < 100.0 and stress >= 100.0:
+		stress_maxed_out.emit()
 
 ## Reduce stress
 func reduce_stress(amount: float) -> void:

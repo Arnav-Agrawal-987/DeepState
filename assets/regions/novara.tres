@@ -1,0 +1,104 @@
+[gd_resource type="Resource" script_class="RegionConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/data/region_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+region_id = "novara"
+region_name = "Republic of Novara"
+region_description = "A post-industrial democracy facing institutional fragmentation. Media independence is under pressure from centralizing forces. The military maintains strong ties to intelligence services."
+institution_config_paths = {
+"govt": "res://assets/institutions/govt_novara.tres",
+"military": "res://assets/institutions/military_novara.tres",
+"intelligence": "res://assets/institutions/intel_novara.tres",
+"media": "res://assets/institutions/media_novara.tres"
+}
+initial_dependencies = {
+"govt": {"military": 0.8, "media": 0.6, "intelligence": 0.5},
+"military": {"intelligence": 0.75},
+"intelligence": {"media": 0.4, "military": 0.3},
+"media": {"govt": 0.45}
+}
+currencies = {
+"cash": {"initial": 1000.0, "fallback": 500.0, "max": 999999.0},
+"bandwidth": {"initial": 50.0, "fallback": 25.0, "max": 100.0},
+"exposure": {"initial": 0.0, "fallback": 10.0, "max": 100.0}
+}
+crisis_tree = [{
+"node_id": "crisis_constitutional",
+"title": "Constitutional Crisis",
+"description": "Tensions between executive and legislative branches have reached a breaking point. The military watches closely as politicians struggle for control.",
+"conditions": {"tension_threshold": 80.0},
+"choices": [{
+"text": "Support Executive Power",
+"description": "Back the executive's push for emergency powers.",
+"requires": {"min_govt_influence": 40.0},
+"cost": {"cash": 1500.0, "bandwidth": 35.0},
+"effects": {"tension_change": -45.0, "exposure_change": 18.0, "govt_influence_change": 15.0},
+"next_node": "crisis_executive_win"
+}, {
+"text": "Facilitate Compromise",
+"description": "Broker a deal between the factions.",
+"requires": {},
+"cost": {"cash": 500.0, "bandwidth": 25.0},
+"effects": {"tension_change": -30.0, "exposure_change": 8.0},
+"next_node": "crisis_compromise"
+}, {
+"text": "Exploit the Chaos",
+"description": "Use the confusion to expand influence everywhere.",
+"requires": {},
+"cost": {"cash": 800.0, "bandwidth": 45.0},
+"effects": {"tension_change": -20.0, "exposure_change": 25.0, "all_influence_change": 8.0},
+"next_node": "crisis_chaos"
+}]
+}, {
+"node_id": "crisis_executive_win",
+"title": "Executive Consolidation",
+"description": "Power concentrates in the executive branch. Institutions fall in line with the new order.",
+"effects": {"all_stress_change": -25.0, "govt_stress_change": -15.0},
+"choices": []
+}, {
+"node_id": "crisis_compromise",
+"title": "Fragile Peace",
+"description": "A temporary agreement holds the system together, but underlying tensions remain unresolved.",
+"effects": {"all_stress_change": -12.0, "tension_base_increase": 10.0},
+"choices": []
+}, {
+"node_id": "crisis_chaos",
+"title": "Opportunity in Disorder",
+"description": "The chaos created openings for deeper infiltration across all institutions.",
+"effects": {"all_stress_change": 10.0, "all_capacity_change": -5.0},
+"choices": []
+}, {
+"node_id": "crisis_military",
+"title": "Military Intervention",
+"description": "The armed forces have moved to 'restore order' amid institutional collapse.",
+"conditions": {"tension_threshold": 95.0, "min_military_stress": 60.0},
+"choices": [{
+"text": "Support the Generals",
+"description": "Align with military leadership.",
+"requires": {"min_military_influence": 50.0},
+"cost": {"cash": 2000.0, "bandwidth": 40.0},
+"effects": {"tension_change": -60.0, "exposure_change": 20.0, "military_influence_change": 25.0},
+"next_node": "crisis_junta"
+}, {
+"text": "Resist Takeover",
+"description": "Work to undermine the coup.",
+"requires": {"min_media_influence": 40.0},
+"cost": {"cash": 1200.0, "bandwidth": 50.0},
+"effects": {"tension_change": -25.0, "exposure_change": 30.0, "military_stress_change": 40.0},
+"next_node": "crisis_resistance"
+}]
+}, {
+"node_id": "crisis_junta",
+"title": "New Order",
+"description": "Military rule is established. Civilian institutions are subordinated.",
+"effects": {"military_strength_change": 20.0, "govt_capacity_change": -20.0, "media_capacity_change": -15.0},
+"choices": []
+}, {
+"node_id": "crisis_resistance",
+"title": "Failed Coup",
+"description": "The military intervention fails. The system survives but is badly weakened.",
+"effects": {"military_stress_change": 50.0, "military_capacity_change": -25.0, "all_stress_change": 20.0},
+"choices": []
+}]

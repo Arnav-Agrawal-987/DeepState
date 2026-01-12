@@ -6,6 +6,8 @@ class_name InstitutionCard
 
 var institution: Institution
 var event_manager: EventManager
+var institution_config: InstitutionConfig
+var available_actions: Array = []  # Stores action nodes from config
 var _ready_called = false
 
 @onready var inst_name = $MarginContainer/VBoxContainer/HeaderHBox/InstitutionName
@@ -23,9 +25,10 @@ func _ready() -> void:
 		update_display()
 
 ## Initialize card with institution data
-func set_institution(inst: Institution, event_mgr: EventManager) -> void:
+func set_institution(inst: Institution, event_mgr: EventManager, config: InstitutionConfig = null) -> void:
 	institution = inst
 	event_manager = event_mgr
+	institution_config = config
 	
 	# Only update display if _ready has been called
 	if _ready_called:
@@ -79,13 +82,63 @@ func update_actions() -> void:
 	for child in actions_container.get_children():
 		child.queue_free()
 	
-	var available_actions = event_manager.get_available_actions(institution)
+	# Get available actions from config
+	if institution_config:
+		available_actions = event_manager.get_available_actions_from_config(institution, institution_config)
+	else:
+		available_actions = []
 	
-	for action_name in available_actions:
+	for action_node in available_actions:
 		var button = Button.new()
-		button.text = action_name.to_upper()
-		button.pressed.connect(_on_action_pressed.bindv([action_name]))
+		var title = action_node.get("title", "Unknown")
+		var cost = action_node.get("cost", {})
+		
+		# Format button text with cost hint
+		var cost_text = _format_cost(cost)
+		button.text = title if cost_text.is_empty() else "%s (%s)" % [title, cost_text]
+		button.tooltip_text = _format_tooltip(action_node)
+		
+		# Connect with action node
+		button.pressed.connect(_on_action_node_pressed.bind(action_node))
 		actions_container.add_child(button)
+
+## Format cost for button display
+func _format_cost(cost: Dictionary) -> String:
+	var parts: Array[String] = []
+	if cost.get("cash", 0.0) > 0:
+		parts.append("$%.0f" % cost["cash"])
+	if cost.get("bandwidth", 0.0) > 0:
+		parts.append("%.0f BW" % cost["bandwidth"])
+	return ", ".join(parts)
+
+## Format tooltip with full action details
+func _format_tooltip(action_node: Dictionary) -> String:
+	var lines: Array[String] = []
+	lines.append(action_node.get("title", "Unknown Action"))
+	
+	var desc = action_node.get("description", "")
+	if not desc.is_empty():
+		lines.append(desc)
+	
+	# Cost section
+	var cost = action_node.get("cost", {})
+	if not cost.is_empty():
+		lines.append("")
+		lines.append("== Cost ==")
+		if cost.get("cash", 0.0) > 0:
+			lines.append("  Cash: $%.0f" % cost["cash"])
+		if cost.get("bandwidth", 0.0) > 0:
+			lines.append("  Bandwidth: %.0f" % cost["bandwidth"])
+	
+	# Effects section
+	var effects = action_node.get("effects", {})
+	if not effects.is_empty():
+		lines.append("")
+		lines.append("== Effects ==")
+		for key in effects:
+			lines.append("  %s: %+.0f" % [key.replace("_", " ").capitalize(), effects[key]])
+	
+	return "\n".join(lines)
 
 ## Apply color coding based on stress level
 func apply_stress_coloring() -> void:
@@ -101,10 +154,21 @@ func apply_stress_coloring() -> void:
 	else:
 		stress_bar.modulate = Color.RED
 
-## Handle action button press
-func _on_action_pressed(action_name: String) -> void:
-	# TODO: Execute action on institution
-	print("Action pressed: %s on %s" % [action_name, institution.institution_name])
+## Handle action button press (data-driven)
+func _on_action_node_pressed(action_node: Dictionary) -> void:
+	if not institution or not event_manager:
+		return
+	
+	var success = event_manager.execute_player_action(action_node, institution)
+	if success:
+		update_display()
+		# Notify parent to update dashboard
+		get_tree().call_group("simulation_root", "_update_dashboard")
+	else:
+		# Visual feedback for failure (e.g., can't afford)
+		modulate = Color.RED
+		var tween = create_tween()
+		tween.tween_property(self, "modulate", Color.WHITE, 0.3)
 
 ## Stress changed
 func _on_stress_changed(new_stress: float) -> void:

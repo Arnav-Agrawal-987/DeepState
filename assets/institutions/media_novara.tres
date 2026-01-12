@@ -1,0 +1,77 @@
+[gd_resource type="Resource" script_class="InstitutionConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/data/institution_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+institution_id = "media"
+institution_name = "National Broadcasting Network"
+institution_type = 1
+initial_capacity = 45.0
+initial_strength = 75.0
+initial_stress = 15.0
+initial_influence = 0.0
+player_event_tree = [{
+"node_id": "action_light",
+"title": "Plant Stories",
+"description": "Feed favorable narratives to sympathetic journalists.",
+"conditions": {"min_influence": 10.0, "max_stress": 95.0},
+"cost": {"cash": 200.0, "bandwidth": 8.0},
+"effects": {"stress_change": 12.0, "influence_change": 4.0, "exposure_change": 1.0, "tension_change": 2.0}
+}, {
+"node_id": "action_moderate",
+"title": "Control Editors",
+"description": "Influence editorial decisions at major outlets.",
+"conditions": {"min_influence": 25.0, "max_stress": 85.0},
+"cost": {"cash": 450.0, "bandwidth": 18.0},
+"effects": {"stress_change": 20.0, "influence_change": 8.0, "exposure_change": 4.0, "tension_change": 4.0}
+}, {
+"node_id": "action_heavy",
+"title": "Manufacture Crises",
+"description": "Create news events to distract from real issues.",
+"conditions": {"min_influence": 55.0},
+"cost": {"cash": 900.0, "bandwidth": 32.0},
+"effects": {"stress_change": 32.0, "influence_change": 12.0, "capacity_change": -8.0, "exposure_change": 10.0, "tension_change": 8.0}
+}, {
+"node_id": "action_deep",
+"title": "Narrative Control",
+"description": "Establish total control over information flow.",
+"conditions": {"min_influence": 75.0},
+"cost": {"cash": 2000.0, "bandwidth": 50.0},
+"effects": {"stress_change": 45.0, "influence_change": 20.0, "capacity_change": -15.0, "exposure_change": -5.0, "tension_change": 12.0}
+}]
+autonomous_event_tree = [{
+"node_id": "stress_whistleblower",
+"trigger_type": "stress",
+"title": "Whistleblower Exposé",
+"description": "Journalists are about to publish a major exposé on government corruption.",
+"conditions": {"min_stress": 70.0},
+"auto_effects": {"stress_change": -15.0, "tension_change": 14.0},
+"player_choices": [{"text": "Kill the story", "requires": {"min_influence": 45.0}, "cost": {"cash": 500.0, "bandwidth": 20.0}, "effects": {"influence_change": 10.0, "exposure_change": 8.0, "tension_change": -5.0}}, {"text": "Redirect story target", "requires": {"min_influence": 55.0}, "cost": {"cash": 700.0, "bandwidth": 25.0}, "effects": {"influence_change": 15.0, "stress_change": 10.0, "exposure_change": 12.0}}, {"text": "Let it run", "effects": {"tension_change": 8.0}}]
+}, {
+"node_id": "stress_censorship",
+"trigger_type": "stress",
+"title": "Censorship Controversy",
+"description": "Accusations of government censorship are damaging media credibility.",
+"conditions": {"min_stress": 80.0},
+"auto_effects": {"stress_change": -18.0, "capacity_change": -5.0, "tension_change": 10.0},
+"player_choices": [{"text": "Amplify controversy", "requires": {"min_influence": 40.0}, "cost": {"cash": 300.0}, "effects": {"stress_change": 15.0, "influence_change": 8.0, "exposure_change": 6.0}}, {"text": "Observe", "effects": {}}]
+}, {
+"node_id": "stable_independence",
+"trigger_type": "stable",
+"title": "Media Independence Push",
+"description": "Advocacy groups push for stronger press freedom laws.",
+"conditions": {"max_stress": 40.0},
+"probability": 0.28,
+"auto_effects": {"capacity_change": 5.0, "strength_change": 4.0},
+"player_choices": [{"text": "Oppose independence", "requires": {"min_influence": 50.0}, "cost": {"cash": 600.0, "bandwidth": 22.0}, "effects": {"stress_change": 25.0, "capacity_change": -8.0, "exposure_change": 10.0}}, {"text": "Support independence", "effects": {"influence_change": -8.0}}]
+}, {
+"node_id": "stable_merger",
+"trigger_type": "stable",
+"title": "Media Consolidation",
+"description": "Major outlets are considering a merger.",
+"conditions": {"max_stress": 35.0, "min_capacity": 40.0},
+"probability": 0.18,
+"auto_effects": {"capacity_change": 3.0},
+"player_choices": [{"text": "Facilitate merger", "requires": {"min_influence": 35.0}, "cost": {"cash": 800.0}, "effects": {"influence_change": 12.0, "exposure_change": 5.0}}, {"text": "Block merger", "requires": {"min_influence": 45.0}, "cost": {"cash": 500.0, "bandwidth": 18.0}, "effects": {"stress_change": 18.0, "exposure_change": 8.0}}]
+}]

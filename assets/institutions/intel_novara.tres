@@ -1,0 +1,68 @@
+[gd_resource type="Resource" script_class="InstitutionConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/data/institution_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+institution_id = "intelligence"
+institution_name = "State Security Bureau"
+institution_type = 3
+initial_capacity = 65.0
+initial_strength = 85.0
+initial_stress = 12.0
+initial_influence = 5.0
+player_event_tree = [{
+"node_id": "action_light",
+"title": "Cultivate Analysts",
+"description": "Build relationships with mid-level intelligence analysts.",
+"conditions": {"min_influence": 10.0, "max_stress": 90.0},
+"cost": {"cash": 350.0, "bandwidth": 15.0},
+"effects": {"stress_change": 8.0, "influence_change": 6.0, "exposure_change": 4.0, "tension_change": 2.0}
+}, {
+"node_id": "action_moderate",
+"title": "Access Operations",
+"description": "Gain visibility into active intelligence operations.",
+"conditions": {"min_influence": 35.0, "max_stress": 80.0},
+"cost": {"cash": 700.0, "bandwidth": 25.0},
+"effects": {"stress_change": 18.0, "influence_change": 10.0, "exposure_change": 8.0, "tension_change": 5.0}
+}, {
+"node_id": "action_heavy",
+"title": "Compromise Networks",
+"description": "Infiltrate and control agent networks.",
+"conditions": {"min_influence": 65.0},
+"cost": {"cash": 1800.0, "bandwidth": 45.0},
+"effects": {"stress_change": 35.0, "influence_change": 16.0, "capacity_change": -10.0, "exposure_change": 18.0, "tension_change": 12.0}
+}, {
+"node_id": "action_deep",
+"title": "Run Counter-Intelligence",
+"description": "Direct the agency's counter-intelligence operations for your benefit.",
+"conditions": {"min_influence": 85.0},
+"cost": {"cash": 4000.0, "bandwidth": 60.0},
+"effects": {"stress_change": 45.0, "influence_change": 25.0, "capacity_change": -18.0, "exposure_change": -10.0, "tension_change": 15.0}
+}]
+autonomous_event_tree = [{
+"node_id": "stress_defection",
+"trigger_type": "stress",
+"title": "Agent Defection",
+"description": "A senior operative has defected with sensitive information.",
+"conditions": {"min_stress": 75.0},
+"auto_effects": {"stress_change": -20.0, "capacity_change": -10.0, "tension_change": 12.0},
+"player_choices": [{"text": "Intercept the defector", "requires": {"min_influence": 60.0}, "cost": {"cash": 1200.0, "bandwidth": 35.0}, "effects": {"influence_change": 22.0, "exposure_change": 15.0}}, {"text": "Let them go", "effects": {"tension_change": 8.0}}]
+}, {
+"node_id": "stress_mole",
+"trigger_type": "stress",
+"title": "Mole Hunt",
+"description": "The agency suspects a foreign agent has infiltrated leadership.",
+"conditions": {"min_stress": 85.0},
+"auto_effects": {"stress_change": -10.0, "tension_change": 16.0},
+"player_choices": [{"text": "Frame a rival", "requires": {"min_influence": 55.0}, "cost": {"cash": 800.0, "bandwidth": 28.0}, "effects": {"influence_change": 18.0, "stress_change": 15.0, "exposure_change": 12.0}}, {"text": "Assist investigation", "requires": {"min_influence": 40.0}, "cost": {"bandwidth": 20.0}, "effects": {"influence_change": 8.0, "exposure_change": 5.0}}, {"text": "Avoid attention", "effects": {"influence_change": -3.0}}]
+}, {
+"node_id": "stable_expansion",
+"trigger_type": "stable",
+"title": "Surveillance Expansion",
+"description": "Budget increase allows for expanded domestic surveillance.",
+"conditions": {"max_stress": 35.0, "min_capacity": 55.0},
+"probability": 0.22,
+"auto_effects": {"capacity_change": 8.0, "strength_change": 4.0},
+"player_choices": [{"text": "Embed own assets", "requires": {"min_influence": 50.0}, "cost": {"cash": 900.0, "bandwidth": 25.0}, "effects": {"influence_change": 15.0, "exposure_change": 5.0}}, {"text": "Oppose expansion", "cost": {"bandwidth": 15.0}, "effects": {"stress_change": 20.0, "exposure_change": 8.0}}]
+}]

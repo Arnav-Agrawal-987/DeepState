@@ -1,0 +1,77 @@
+[gd_resource type="Resource" script_class="InstitutionConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/data/institution_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+institution_id = "military"
+institution_name = "Armed Forces"
+institution_type = 0
+initial_capacity = 70.0
+initial_strength = 95.0
+initial_stress = 8.0
+initial_influence = 0.0
+player_event_tree = [{
+"node_id": "action_light",
+"title": "Befriend Junior Officers",
+"description": "Build relationships with ambitious lower-ranking personnel.",
+"conditions": {"min_influence": 10.0, "max_stress": 90.0},
+"cost": {"cash": 300.0, "bandwidth": 12.0},
+"effects": {"stress_change": 10.0, "influence_change": 5.0, "exposure_change": 2.0, "tension_change": 2.0}
+}, {
+"node_id": "action_moderate",
+"title": "Influence Procurement",
+"description": "Manipulate defense contracts and equipment purchases.",
+"conditions": {"min_influence": 30.0, "max_stress": 85.0},
+"cost": {"cash": 800.0, "bandwidth": 22.0},
+"effects": {"stress_change": 20.0, "influence_change": 8.0, "exposure_change": 5.0, "tension_change": 6.0}
+}, {
+"node_id": "action_heavy",
+"title": "Compromise Command",
+"description": "Obtain leverage over senior military leadership.",
+"conditions": {"min_influence": 60.0},
+"cost": {"cash": 1500.0, "bandwidth": 40.0},
+"effects": {"stress_change": 38.0, "influence_change": 14.0, "capacity_change": -6.0, "exposure_change": 14.0, "tension_change": 12.0}
+}, {
+"node_id": "action_deep",
+"title": "Control Promotion Boards",
+"description": "Ensure only loyal officers reach high command.",
+"conditions": {"min_influence": 80.0},
+"cost": {"cash": 3000.0, "bandwidth": 55.0},
+"effects": {"stress_change": 55.0, "influence_change": 22.0, "capacity_change": -12.0, "exposure_change": 25.0, "tension_change": 20.0}
+}]
+autonomous_event_tree = [{
+"node_id": "stress_mutiny",
+"trigger_type": "stress",
+"title": "Unit Insubordination",
+"description": "A garrison is refusing orders from central command.",
+"conditions": {"min_stress": 80.0},
+"auto_effects": {"stress_change": -22.0, "tension_change": 15.0},
+"player_choices": [{"text": "Support the mutineers", "requires": {"min_influence": 50.0}, "cost": {"cash": 600.0, "bandwidth": 25.0}, "effects": {"influence_change": 20.0, "exposure_change": 18.0, "tension_change": 10.0}}, {"text": "Stay uninvolved", "effects": {"tension_change": 5.0}}]
+}, {
+"node_id": "stress_leak",
+"trigger_type": "stress",
+"title": "Intelligence Breach",
+"description": "Classified military documents have been leaked.",
+"conditions": {"min_stress": 90.0},
+"auto_effects": {"stress_change": -15.0, "capacity_change": -8.0, "tension_change": 18.0},
+"player_choices": [{"text": "Acquire the documents", "requires": {"min_influence": 55.0}, "cost": {"cash": 1000.0, "bandwidth": 30.0}, "effects": {"influence_change": 25.0, "exposure_change": 20.0}}, {"text": "Let it play out", "effects": {}}]
+}, {
+"node_id": "stable_modernization",
+"trigger_type": "stable",
+"title": "Military Modernization",
+"description": "Leadership proposes restructuring and equipment upgrades.",
+"conditions": {"max_stress": 40.0, "min_capacity": 55.0},
+"probability": 0.2,
+"auto_effects": {"capacity_change": 6.0, "strength_change": 5.0},
+"player_choices": [{"text": "Sabotage modernization", "requires": {"min_influence": 55.0}, "cost": {"cash": 800.0, "bandwidth": 28.0}, "effects": {"stress_change": 32.0, "capacity_change": -12.0, "exposure_change": 15.0}}, {"text": "Allow modernization", "effects": {"influence_change": -5.0}}]
+}, {
+"node_id": "stable_exercise",
+"trigger_type": "stable",
+"title": "Joint Military Exercise",
+"description": "International military exercises are being planned.",
+"conditions": {"max_stress": 30.0},
+"probability": 0.15,
+"auto_effects": {"strength_change": 3.0},
+"player_choices": [{"text": "Disrupt planning", "requires": {"min_influence": 40.0}, "cost": {"cash": 500.0, "bandwidth": 20.0}, "effects": {"stress_change": 18.0, "exposure_change": 8.0}}, {"text": "Monitor only", "effects": {"influence_change": -2.0}}]
+}]
