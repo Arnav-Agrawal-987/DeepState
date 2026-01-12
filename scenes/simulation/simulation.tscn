@@ -1,0 +1,160 @@
+[gd_scene load_steps=2 format=3 uid="uid://bl4xtcl1ndyya"]
+
+[ext_resource type="Script" uid="uid://clsudyryivyd3" path="res://src/simulation/simulation_root.gd" id="1_q1p4u"]
+
+[node name="SimulationRoot" type="Node2D"]
+script = ExtResource("1_q1p4u")
+
+[node name="WorldContext" type="Node" parent="."]
+
+[node name="PlayerState" type="Node" parent="."]
+
+[node name="InstitutionManager" type="Node" parent="."]
+
+[node name="DependencyGraph" type="Node" parent="."]
+
+[node name="TensionManager" type="Node" parent="."]
+
+[node name="EventManager" type="Node" parent="."]
+
+[node name="SimulationClock" type="Node" parent="."]
+
+[node name="SimulationUI" type="CanvasLayer" parent="."]
+
+[node name="PlayerDashboard" type="Control" parent="SimulationUI"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/PlayerDashboard"]
+layout_mode = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="SimulationUI/PlayerDashboard/VBoxContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="SimulationUI/PlayerDashboard/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "Day: 1"
+
+[node name="CashLabel" type="Label" parent="SimulationUI/PlayerDashboard/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "Cash: $1000"
+
+[node name="BandwidthLabel" type="Label" parent="SimulationUI/PlayerDashboard/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "Bandwidth: 50/100"
+
+[node name="ExposureLabel" type="Label" parent="SimulationUI/PlayerDashboard/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "Exposure: 0%"
+
+[node name="TensionBar" type="ProgressBar" parent="SimulationUI/PlayerDashboard/VBoxContainer"]
+layout_mode = 2
+
+[node name="InstitutionPanel" type="Control" parent="SimulationUI"]
+layout_mode = 3
+anchors_preset = 0
+
+[node name="ScrollContainer" type="ScrollContainer" parent="SimulationUI/InstitutionPanel"]
+layout_mode = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/InstitutionPanel/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="EventDialog" type="Control" parent="SimulationUI"]
+visible = false
+layout_mode = 3
+anchors_preset = 0
+
+[node name="PanelContainer" type="PanelContainer" parent="SimulationUI/EventDialog"]
+layout_mode = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/EventDialog/PanelContainer"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="SimulationUI/EventDialog/PanelContainer/VBoxContainer"]
+layout_mode = 2
+text = "Event Title"
+
+[node name="DescriptionLabel" type="Label" parent="SimulationUI/EventDialog/PanelContainer/VBoxContainer"]
+layout_mode = 2
+text = "Event Description"
+text_overrun_behavior = 3
+
+[node name="ChoicesContainer" type="VBoxContainer" parent="SimulationUI/EventDialog/PanelContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="CrisisOverlay" type="Control" parent="SimulationUI"]
+visible = false
+layout_mode = 3
+anchors_preset = 0
+
+[node name="ColorRect" type="ColorRect" parent="SimulationUI/CrisisOverlay"]
+layout_mode = 1
+color = Color(0, 0, 0, 0.7)
+
+[node name="CrisisPanel" type="PanelContainer" parent="SimulationUI/CrisisOverlay"]
+layout_mode = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/CrisisOverlay/CrisisPanel"]
+layout_mode = 2
+
+[node name="CrisisTitle" type="Label" parent="SimulationUI/CrisisOverlay/CrisisPanel/VBoxContainer"]
+layout_mode = 2
+text = "CRISIS"
+
+[node name="CrisisDescription" type="Label" parent="SimulationUI/CrisisOverlay/CrisisPanel/VBoxContainer"]
+layout_mode = 2
+text = "A crisis has occurred"
+text_overrun_behavior = 3
+
+[node name="DebugPanel" type="PanelContainer" parent="SimulationUI"]
+
+[node name="MarginContainer" type="MarginContainer" parent="SimulationUI/DebugPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 5
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 5
+theme_override_constants/margin_bottom = 5
+
+[node name="HBoxContainer" type="HBoxContainer" parent="SimulationUI/DebugPanel/MarginContainer"]
+layout_mode = 2
+
+[node name="DebugLabel" type="Label" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+layout_mode = 2
+text = "DEBUG:"
+
+[node name="AdvanceDayBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+layout_mode = 2
+text = "Advance Day"
+
+[node name="AddStressBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+layout_mode = 2
+text = "Add Stress"
+
+[node name="AddTensionBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+layout_mode = 2
+text = "Add Tension"
+
+[node name="TriggerCrisisBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+layout_mode = 2
+text = "Trigger Crisis"
+
+[node name="AddCashBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+layout_mode = 2
+text = "Add Cash"
+
+[node name="AddBandwidthBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+layout_mode = 2
+text = "Add Bandwidth"
+
+[node name="AddInfluenceBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+layout_mode = 2
+text = "Add Influence"
+
+[node name="TestEventBtn" type="Button" parent="SimulationUI/DebugPanel/MarginContainer/HBoxContainer"]
+layout_mode = 2
+text = "Test Event"
+
+[node name="ConsoleLabel" type="Label" parent="SimulationUI"]
+text = "Ready"

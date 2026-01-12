@@ -1,0 +1,182 @@
+Deep State – Game Logic Specification
+1. Core Concept
+Deep State is a systemic strategy game about maintaining structural relevance within a network of institutions that are continuously attempting to stabilize, reform, or marginalize hidden influence. The player does not control a character, faction, or government; instead, the player represents a distributed latent force — the Deep State.
+There is no win condition. The game ends only when the Deep State becomes irrelevant during a major systemic crisis. Score is measured in days survived.
+Design Philosophy: - Power is indirect - Control is delayed - Stability is dangerous - Crisis is inevitable
+________________________________________
+2. Layered Game State Model
+The entire game state is organized into strict layers. Each layer has clear ownership and mutation rules. Violating these rules breaks systemic consistency.
+________________________________________
+2.1 Static Context Layer (World Context)
+This layer defines the immutable environment of a run.
+Contents:
+•	Selected region / nation
+•	Region identity and metadata
+Rules:
+•	Loaded once at game start from RegionConfig
+•	Never modified during play
+•	Currently contains no gameplay modifiers
+•	Queried only for region identity and institutional setup
+Design Note: At this stage of development, regions have no demographic or geographic modifiers. All gameplay variation between regions is driven entirely by:
+•	The set of institutions present
+•	The initial institutional dependency graph
+Future expansion may introduce modifiers, but the simulation must function correctly without them.
+________________________________________
+2.2 Institutional Layer
+Institutions are semi-autonomous agents that form the backbone of the simulation.
+Examples: - Policy - Military - Judiciary - Media - Police
+Each institution exists for the entire duration of the game and cannot collapse or be removed.
+________________________________________
+2.2.1 Institution Types (Content Classification)
+Each institution has a type used exclusively for content, flavor, and UI logic. These types do not affect simulation mechanics.
+Institution Types: - Militant – Armed or coercive bodies (military, paramilitary, special forces) - Civilian – Public-facing or service institutions (media, education, welfare) - Policy – Lawmaking and executive bodies (legislature, ministries) - Intelligence – Secretive or information-focused institutions (intelligence agencies, surveillance bodies)
+Rules: - Institution type never modifies numeric mechanics - Types gate: - Event tree content - UI presentation - Flavor text and narrative framing
+________________________________________
+2.2.2 Institution State
+Each institution maintains the following internal state:
+•	Capacity – Ability to self-regulate and act autonomously
+•	Strength – Maximum stress tolerance
+•	Stress – Accumulated pressure from player actions, dependencies, and events
+•	Player Influence (0–100) – How embedded the Deep State is within the institution
+All values are bounded and persist across days.
+________________________________________
+2.2.3 Institutional Intelligence
+Institutions are not strategic planners. They act according to deterministic local rules.
+Daily behavior: 1. Increase strength by a function of capacity 2. Probabilistically trigger a stable event if stress is low 3. Trigger a stress event if stress ≥ strength
+Post-crisis behavior: - Attempt to rewire local dependency graph edges to improve resilience
+Institutions never: - Choose event outcomes - Apply buffs or debuffs directly - Access player state directly
+________________________________________
+2.3 Institutional Dependency Graph
+Institutions are connected via a directed, weighted dependency graph.
+Examples: - Judiciary → Police - Media → Public Trust - Policy → Budget Allocation
+Properties: - Nodes: Institutions - Edges: Dependency strength (float) - Fully mutable
+Rules: - Modified only by events or institutional post-crisis actions - Rewired globally after every crisis - Used to propagate stress, modifiers, and influence pressure
+This graph is the primary structural power surface of the game.
+________________________________________
+2.4 Player State (The Deep State)
+The player is a systemic actor, not a character.
+Player Resources: - Cash – Fungible resource - Bandwidth – Limits how many actions can be taken per day - Exposure – Visibility of the Deep State
+Exposure Rules: - Naturally decays over time - Increased by aggressive or frequent actions - Modifies event availability and outcomes - Influences relevance calculations during crises
+The player never directly manipulates institutions; all effects occur through actions and events.
+________________________________________
+3. Event System
+Events are the primary mechanism of change in the simulation. All meaningful state mutation outside of direct player actions occurs through events.
+________________________________________
+3.1 Events
+Events are local and frequent, always associated with a specific institution.
+Sources: 1. Stress-triggered events – Occur when institution stress exceeds strength - Usually beneficial to the player - Represent leaks, fractures, dissent
+2.	Stable-triggered events – Occur probabilistically when an institution is stable
+o	Usually harmful to the player
+o	Represent reforms, audits, internal cleanup
+Effects: - Modify institution stats - Modify player resources - Adjust influence values - Increase global tension
+Each institution has two event trees, one per event source type.
+________________________________________
+3.2 Global Tension
+Global tension is a single scalar value representing systemic strain.
+Rules: - Increased by every event - Cannot decrease naturally - Triggers crises when threshold is crossed
+________________________________________
+3.3 Crises
+Crises represent systemic inflection points.
+Examples: - Constitutional reform - Coup attempt - Judicial purge - Media exposé
+Trigger: - Global tension exceeds threshold
+Properties: - Has an epicenter institution - Uses a global crisis event tree - Causes all institutions to rewire dependencies
+Resolution: - Calculates Deep State relevance - If relevance < threshold → game over - Otherwise, tension partially resets and play continues
+Crises are the only point where loss is possible.
+________________________________________
+4. Daily Simulation Cycle
+Time advances in discrete days.
+Daily Order (Strict): 1. Day Start 2. Institutions auto-update 3. Minor events triggered and resolved 4. Global tension updated 5. Crisis (if triggered) 6. Player turn 7. Day End
+This order is enforced by the SimulationClock and must never be bypassed.
+________________________________________
+5. Player Actions
+The player may: - Convert resources (cash ↔ bandwidth) - Apply pressure to institutions (increase stress, reduce capacity) - Make decisions during events
+Action Constraints: - Tiered by player influence - Limited by bandwidth - Increase exposure
+________________________________________
+6. Loss Condition
+The player does not lose by running out of resources.
+The player loses when: > A crisis determines the Deep State is no longer structurally relevant within the institutional network.
+This evaluation considers: - Influence distribution - Dependency graph centrality - Exposure - Institutional stability
+________________________________________
+7. Data Modeling & Implementation Structure
+7.1 Core Data Objects
+The game is implemented using a small set of authoritative data objects. Each object has a single responsibility and clear ownership rules.
+•	RegionConfig (Resource)
+o	Region ID
+o	Display name
+o	World map location / polygon reference
+o	Institution templates
+o	Initial dependency graph
+•	WorldContext (Node)
+o	Active region reference
+o	Read-only after setup
+•	PlayerState (Node)
+o	Cash
+o	Bandwidth
+o	Exposure
+o	Exposure decay logic
+•	Institution (Node / Node2D)
+o	ID
+o	Type (militant / civilian / policy / intelligence)
+o	Capacity
+o	Strength
+o	Stress
+o	Player Influence
+•	InstitutionManager (Node)
+o	Owns all institutions
+o	Executes daily institution logic
+•	DependencyGraph (Node)
+o	Directed adjacency map
+o	Edge weights
+o	Rewiring API
+•	EventTree (Resource)
+o	Node-based branching structure
+o	Conditions
+o	Effects
+•	EventManager (Node)
+o	Resolves events
+o	Applies effects via authorized systems
+•	TensionManager (Node)
+o	Global tension scalar
+o	Crisis threshold logic
+•	SimulationClock (Node)
+o	Current day
+o	Enforces daily execution order
+•	SaveGame (Resource)
+o	Region ID
+o	Serialized PlayerState
+o	Serialized institutions and dependency graph
+o	Global tension value
+o	Current day
+________________________________________
+8. Menu & World Map Flow
+The game uses a region-based meta-structure. Each region represents an independent simulation run.
+8.1 Main Menu
+The main menu presents:
+•	Play Game
+•	Quit
+8.2 World Map Selection
+When entering the game, the player is shown a world map.
+World Map Behavior:
+•	Each playable region is a clickable area
+•	Selecting a region displays:
+o	Region name
+o	Brief institutional overview
+o	Whether a saved game exists
+Selection Rules:
+•	If no save exists for the region → start a new run
+•	If a save exists and the region is not lost → resume that run
+•	If the region has been lost → region shows high score and start a new run
+8.3 Multiple Concurrent Regions
+•	Each region has an independent save file
+•	The player may have multiple active regions at once
+•	Progress in one region does not affect others
+The world map functions as a meta-layer, not part of the simulation itself.
+________________________________________
+9. Design Guarantees
+•	Institutions never collapse
+•	Crises are inevitable
+•	Stability is a threat
+•	Survival requires balance, not domination
+________________________________________
+10. Summary
+Deep State is a systemic survival game about managing invisible power inside complex institutions. The player’s challenge is not to win, but to remain necessary.
