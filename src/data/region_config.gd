@@ -79,7 +79,29 @@ func get_crisis_node(node_id: String) -> Dictionary:
 			return node
 	return {}
 
-## Check if crisis should trigger
+## Get the current crisis event based on tree state
+## Returns empty dict if tree is exhausted or all nodes pruned
+func get_current_crisis_event(current_node: String, pruned_branches: Array) -> Dictionary:
+	# If we have a current node, try to return it
+	if current_node != "":
+		var node = get_crisis_node(current_node)
+		if not node.is_empty() and current_node not in pruned_branches:
+			return node
+	
+	# Otherwise return root node (first in tree) if not pruned
+	if crisis_tree.size() > 0:
+		var root = crisis_tree[0]
+		var root_id = root.get("node_id", "")
+		if root_id not in pruned_branches:
+			return root
+	
+	return {}
+
+## Check if crisis should trigger based on tension threshold
+func should_trigger_crisis(tension: float, threshold: float = 100.0) -> bool:
+	return tension >= threshold
+
+## Check if crisis should trigger (legacy method)
 func check_crisis_conditions(tension: float, node_id: String) -> bool:
 	var node = get_crisis_node(node_id)
 	if node.is_empty():
@@ -90,6 +112,44 @@ func check_crisis_conditions(tension: float, node_id: String) -> bool:
 		return tension >= conditions["tension_threshold"]
 	
 	return false
+
+## Filter available crisis choices based on player resources and institution states
+func get_available_crisis_choices(node: Dictionary, player_state: Dictionary, inst_states: Dictionary) -> Array:
+	var choices = node.get("choices", [])
+	var available = []
+	
+	for choice in choices:
+		var can_afford = true
+		var meets_requirements = true
+		
+		# Check cost (cost can be int for bandwidth or Dictionary)
+		var cost = choice.get("cost", 0)
+		if cost is int:
+			if cost > player_state.get("bandwidth", 0.0):
+				can_afford = false
+		elif cost is Dictionary:
+			if cost.get("cash", 0.0) > player_state.get("cash", 0.0):
+				can_afford = false
+			if cost.get("bandwidth", 0.0) > player_state.get("bandwidth", 0.0):
+				can_afford = false
+		
+		# Check institution-specific requirements
+		var requires = choice.get("requires", {})
+		for key in requires:
+			if key.ends_with("_influence"):
+				var inst_id = key.replace("min_", "").replace("_influence", "")
+				var inst_state = inst_states.get(inst_id, {})
+				if inst_state.get("influence", 0.0) < requires[key]:
+					meets_requirements = false
+		
+		# Add choice with availability info
+		var choice_info = choice.duplicate()
+		choice_info["can_afford"] = can_afford
+		choice_info["meets_requirements"] = meets_requirements
+		choice_info["available"] = can_afford and meets_requirements
+		available.append(choice_info)
+	
+	return available
 
 ## Create default crisis tree
 func create_default_crisis_tree() -> void:

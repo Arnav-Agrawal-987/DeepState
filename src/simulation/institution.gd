@@ -24,7 +24,7 @@ var player_influence: float = 0.0  # Range 0-100
 
 # Configuration
 var capacity_regeneration: float = 2.0  # Strength gain per day
-var stress_decay: float = 1.0  # Natural stress reduction
+var stress_decay_rate: float = 0.05  # 5% natural stress decay per day
 
 func _ready() -> void:
 	pass
@@ -54,9 +54,11 @@ func reduce_stress(amount: float) -> void:
 	stress = max(stress - amount, 0.0)
 	stress_changed.emit(stress)
 
-## Apply natural decay each day
+## Apply natural decay each day (percentage-based)
 func apply_stress_decay() -> void:
-	reduce_stress(stress_decay)
+	# Decay by percentage of current stress
+	var decay_amount = stress * stress_decay_rate
+	reduce_stress(decay_amount)
 
 ## Check if stress triggers an event
 func should_trigger_stress_event() -> bool:

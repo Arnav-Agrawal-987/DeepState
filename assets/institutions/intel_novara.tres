@@ -17,28 +17,56 @@ player_event_tree = [{
 "description": "Build relationships with mid-level intelligence analysts.",
 "conditions": {"min_influence": 10.0, "max_stress": 90.0},
 "cost": {"cash": 350.0, "bandwidth": 15.0},
-"effects": {"stress_change": 8.0, "influence_change": 6.0, "exposure_change": 4.0, "tension_change": 2.0}
+"effects": {"stress_change": 8.0, "influence_change": 6.0, "exposure_change": 4.0, "tension_change": 2.0},
+"choices": [{"text": "Recruit as informants", "next_node": "analyst_network", "effects": {"influence_change": 3.0}}, {"text": "Keep at arm's length", "next_node": ""}]
+}, {
+"node_id": "analyst_network",
+"title": "Build Analyst Network",
+"description": "Your analysts begin feeding you classified reports regularly.",
+"conditions": {"min_influence": 18.0},
+"cost": {"cash": 250.0, "bandwidth": 10.0},
+"effects": {"influence_change": 5.0, "exposure_change": 3.0},
+"choices": [{"text": "Expand network", "next_node": "action_moderate", "effects": {"influence_change": 2.0}}, {"text": "Maintain current assets", "next_node": ""}]
 }, {
 "node_id": "action_moderate",
 "title": "Access Operations",
 "description": "Gain visibility into active intelligence operations.",
 "conditions": {"min_influence": 35.0, "max_stress": 80.0},
 "cost": {"cash": 700.0, "bandwidth": 25.0},
-"effects": {"stress_change": 18.0, "influence_change": 10.0, "exposure_change": 8.0, "tension_change": 5.0}
+"effects": {"stress_change": 18.0, "influence_change": 10.0, "exposure_change": 8.0, "tension_change": 5.0},
+"choices": [{"text": "Copy operation files", "next_node": "operation_archive", "prunes_branches": ["action_light", "analyst_network"], "effects": {"exposure_change": 5.0}}, {"text": "Just observe", "next_node": ""}]
+}, {
+"node_id": "operation_archive",
+"title": "Build Operations Archive",
+"description": "You now have copies of sensitive operations data - powerful leverage.",
+"conditions": {"min_influence": 45.0},
+"cost": {"cash": 400.0, "bandwidth": 15.0},
+"effects": {"influence_change": 8.0, "tension_change": 3.0},
+"choices": [{"text": "Use for blackmail", "next_node": "action_heavy", "effects": {"exposure_change": 8.0, "influence_change": 5.0}}, {"text": "Keep as insurance", "next_node": ""}]
 }, {
 "node_id": "action_heavy",
 "title": "Compromise Networks",
 "description": "Infiltrate and control agent networks.",
 "conditions": {"min_influence": 65.0},
 "cost": {"cash": 1800.0, "bandwidth": 45.0},
-"effects": {"stress_change": 35.0, "influence_change": 16.0, "capacity_change": -10.0, "exposure_change": 18.0, "tension_change": 12.0}
+"effects": {"stress_change": 35.0, "influence_change": 16.0, "capacity_change": -10.0, "exposure_change": 18.0, "tension_change": 12.0},
+"choices": [{"text": "Turn double agents", "next_node": "double_agent_control", "prunes_branches": ["action_moderate", "operation_archive"], "effects": {"influence_change": 10.0, "exposure_change": 12.0}}, {"text": "Passive control", "next_node": ""}]
+}, {
+"node_id": "double_agent_control",
+"title": "Run Double Agents",
+"description": "Foreign assets now report to you first, giving unprecedented intelligence.",
+"conditions": {"min_influence": 75.0},
+"cost": {"cash": 1200.0, "bandwidth": 35.0},
+"effects": {"influence_change": 12.0, "exposure_change": -5.0, "tension_change": 8.0},
+"choices": [{"text": "Prepare for takeover", "next_node": "action_deep", "effects": {"influence_change": 8.0}}]
 }, {
 "node_id": "action_deep",
 "title": "Run Counter-Intelligence",
 "description": "Direct the agency's counter-intelligence operations for your benefit.",
 "conditions": {"min_influence": 85.0},
 "cost": {"cash": 4000.0, "bandwidth": 60.0},
-"effects": {"stress_change": 45.0, "influence_change": 25.0, "capacity_change": -18.0, "exposure_change": -10.0, "tension_change": 15.0}
+"effects": {"stress_change": 45.0, "influence_change": 25.0, "capacity_change": -18.0, "exposure_change": -10.0, "tension_change": 15.0},
+"choices": [{"text": "Complete shadow control", "next_node": "", "prunes_branches": ["action_heavy", "double_agent_control"], "effects": {"influence_change": 15.0, "exposure_change": -15.0}}]
 }]
 autonomous_event_tree = [{
 "node_id": "stress_defection",
@@ -47,7 +75,23 @@ autonomous_event_tree = [{
 "description": "A senior operative has defected with sensitive information.",
 "conditions": {"min_stress": 75.0},
 "auto_effects": {"stress_change": -20.0, "capacity_change": -10.0, "tension_change": 12.0},
-"player_choices": [{"text": "Intercept the defector", "requires": {"min_influence": 60.0}, "cost": {"cash": 1200.0, "bandwidth": 35.0}, "effects": {"influence_change": 22.0, "exposure_change": 15.0}}, {"text": "Let them go", "effects": {"tension_change": 8.0}}]
+"player_choices": [{"text": "Intercept the defector", "requires": {"min_influence": 60.0}, "cost": {"cash": 1200.0, "bandwidth": 35.0}, "effects": {"influence_change": 22.0, "exposure_change": 15.0}, "next_node": "defector_captured", "prunes_branches": ["stress_mole"]}, {"text": "Let them go", "effects": {"tension_change": 8.0}, "next_node": "defector_escaped"}]
+}, {
+"node_id": "defector_captured",
+"trigger_type": "stress",
+"title": "Defector Interrogation",
+"description": "You have the defector. Their knowledge could be invaluable.",
+"conditions": {"min_stress": 60.0},
+"auto_effects": {"tension_change": 5.0},
+"player_choices": [{"text": "Extract all intel", "cost": {"bandwidth": 25.0}, "effects": {"influence_change": 18.0, "exposure_change": 10.0, "stress_change": 15.0}}, {"text": "Turn them back", "requires": {"min_influence": 70.0}, "cost": {"cash": 800.0}, "effects": {"influence_change": 25.0, "exposure_change": 5.0}}]
+}, {
+"node_id": "defector_escaped",
+"trigger_type": "stress",
+"title": "Secrets Revealed",
+"description": "The defector has exposed agency operations to foreign powers.",
+"conditions": {"min_stress": 70.0},
+"auto_effects": {"capacity_change": -15.0, "tension_change": 20.0},
+"player_choices": [{"text": "Damage control", "cost": {"cash": 600.0, "bandwidth": 30.0}, "effects": {"stress_change": -10.0, "exposure_change": 8.0}}, {"text": "Blame rivals", "requires": {"min_influence": 50.0}, "effects": {"influence_change": 10.0, "stress_change": 20.0, "tension_change": 10.0}}]
 }, {
 "node_id": "stress_mole",
 "trigger_type": "stress",
@@ -55,7 +99,23 @@ autonomous_event_tree = [{
 "description": "The agency suspects a foreign agent has infiltrated leadership.",
 "conditions": {"min_stress": 85.0},
 "auto_effects": {"stress_change": -10.0, "tension_change": 16.0},
-"player_choices": [{"text": "Frame a rival", "requires": {"min_influence": 55.0}, "cost": {"cash": 800.0, "bandwidth": 28.0}, "effects": {"influence_change": 18.0, "stress_change": 15.0, "exposure_change": 12.0}}, {"text": "Assist investigation", "requires": {"min_influence": 40.0}, "cost": {"bandwidth": 20.0}, "effects": {"influence_change": 8.0, "exposure_change": 5.0}}, {"text": "Avoid attention", "effects": {"influence_change": -3.0}}]
+"player_choices": [{"text": "Frame a rival", "requires": {"min_influence": 55.0}, "cost": {"cash": 800.0, "bandwidth": 28.0}, "effects": {"influence_change": 18.0, "stress_change": 15.0, "exposure_change": 12.0}, "next_node": "rival_eliminated"}, {"text": "Assist investigation", "requires": {"min_influence": 40.0}, "cost": {"bandwidth": 20.0}, "effects": {"influence_change": 8.0, "exposure_change": 5.0}, "next_node": "investigation_ally"}, {"text": "Avoid attention", "effects": {"influence_change": -3.0}}]
+}, {
+"node_id": "rival_eliminated",
+"trigger_type": "stress",
+"title": "Rival Purged",
+"description": "Your rival has been removed. You move up the internal hierarchy.",
+"conditions": {"min_stress": 70.0},
+"auto_effects": {"capacity_change": -5.0},
+"player_choices": [{"text": "Take their position", "cost": {"cash": 500.0}, "effects": {"influence_change": 15.0, "exposure_change": 8.0}}, {"text": "Stay in shadows", "effects": {"influence_change": 5.0, "exposure_change": -5.0}}]
+}, {
+"node_id": "investigation_ally",
+"trigger_type": "stress",
+"title": "Trusted Insider",
+"description": "Your help in the investigation has earned trust from leadership.",
+"conditions": {"min_stress": 65.0},
+"auto_effects": {"stress_change": -8.0},
+"player_choices": [{"text": "Request promotion", "effects": {"influence_change": 12.0, "exposure_change": 6.0}}, {"text": "Build capital", "effects": {"influence_change": 6.0}}]
 }, {
 "node_id": "stable_expansion",
 "trigger_type": "stable",
@@ -64,5 +124,23 @@ autonomous_event_tree = [{
 "conditions": {"max_stress": 35.0, "min_capacity": 55.0},
 "probability": 0.22,
 "auto_effects": {"capacity_change": 8.0, "strength_change": 4.0},
-"player_choices": [{"text": "Embed own assets", "requires": {"min_influence": 50.0}, "cost": {"cash": 900.0, "bandwidth": 25.0}, "effects": {"influence_change": 15.0, "exposure_change": 5.0}}, {"text": "Oppose expansion", "cost": {"bandwidth": 15.0}, "effects": {"stress_change": 20.0, "exposure_change": 8.0}}]
+"player_choices": [{"text": "Embed own assets", "requires": {"min_influence": 50.0}, "cost": {"cash": 900.0, "bandwidth": 25.0}, "effects": {"influence_change": 15.0, "exposure_change": 5.0}, "next_node": "surveillance_control", "prunes_branches": ["stable_reform_intel"]}, {"text": "Oppose expansion", "cost": {"bandwidth": 15.0}, "effects": {"stress_change": 20.0, "exposure_change": 8.0}, "next_node": "stable_reform_intel"}]
+}, {
+"node_id": "surveillance_control",
+"trigger_type": "stable",
+"title": "Eyes Everywhere",
+"description": "Your surveillance assets provide intelligence on everyone - including your enemies.",
+"conditions": {"max_stress": 45.0},
+"probability": 0.3,
+"auto_effects": {"influence_change": 5.0},
+"player_choices": [{"text": "Gather compromising info", "cost": {"bandwidth": 20.0}, "effects": {"influence_change": 10.0, "exposure_change": 3.0}}, {"text": "Monitor only", "effects": {"influence_change": 3.0}}]
+}, {
+"node_id": "stable_reform_intel",
+"trigger_type": "stable",
+"title": "Intelligence Oversight",
+"description": "Parliament proposes civilian oversight of intelligence operations.",
+"conditions": {"max_stress": 40.0},
+"probability": 0.2,
+"auto_effects": {"capacity_change": -3.0},
+"player_choices": [{"text": "Undermine oversight", "requires": {"min_influence": 45.0}, "cost": {"cash": 700.0, "bandwidth": 22.0}, "effects": {"influence_change": 12.0, "stress_change": 15.0}}, {"text": "Accept oversight", "effects": {"influence_change": -5.0, "exposure_change": -3.0}}]
 }]

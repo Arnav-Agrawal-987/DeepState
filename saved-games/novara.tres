@@ -1,0 +1,126 @@
+[gd_resource type="Resource" script_class="RegionSaveState" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/data/region_save_state.gd" id="1_oixux"]
+
+[resource]
+script = ExtResource("1_oixux")
+region_id = "novara"
+region_config_path = "res://assets/regions/novara.tres"
+current_day = 2
+is_lost = true
+high_score = 2
+currencies = {
+"bandwidth": 14.0,
+"cash": 925.0,
+"exposure": 12.88507150565023
+}
+crisis_tree_state = {
+"current_node": "crisis_constitutional",
+"pruned_branches": []
+}
+institutions = {
+"intelligence": {
+"autonomous_tree_state": {
+"choices_made": {},
+"current_node": "",
+"last_event_day": 0,
+"pruned_branches": [],
+"triggered_events": []
+},
+"capacity": 65.0,
+"config_path": "res://assets/institutions/intel_novara.tres",
+"influence": 11.0,
+"player_tree_state": {
+"actions_taken": {},
+"choices_made": {},
+"current_node": "",
+"pruned_branches": [],
+"visited_nodes": []
+},
+"random_tree_state": {
+"current_node": "",
+"pruned_branches": []
+},
+"strength": 86.3,
+"stress": 21.0,
+"stress_tree_state": {
+"current_node": "",
+"pruned_branches": []
+}
+},
+"media_novara": {
+"autonomous_tree_state": {
+"choices_made": {},
+"current_node": "",
+"last_event_day": 0,
+"pruned_branches": [],
+"triggered_events": []
+},
+"capacity": 50.0,
+"config_path": "res://assets/institutions/media_novara.tres",
+"influence": 25.0,
+"player_tree_state": {
+"actions_taken": {},
+"choices_made": {},
+"current_node": "",
+"pruned_branches": [],
+"visited_nodes": []
+},
+"random_tree_state": {
+"current_node": "",
+"pruned_branches": []
+},
+"strength": 71.0,
+"stress": 99.2171119666813,
+"stress_tree_state": {
+"current_node": "propaganda_1",
+"pruned_branches": ["reform_1", "reform_2", "propaganda_1", "propaganda_2"]
+}
+},
+"military_novara": {
+"autonomous_tree_state": {
+"choices_made": {},
+"current_node": "",
+"last_event_day": 0,
+"pruned_branches": [],
+"triggered_events": []
+},
+"capacity": 75.0,
+"config_path": "res://assets/institutions/military_novara.tres",
+"influence": 36.0,
+"player_tree_state": {
+"actions_taken": {},
+"choices_made": {},
+"current_node": "",
+"pruned_branches": [],
+"visited_nodes": []
+},
+"random_tree_state": {
+"current_node": "",
+"pruned_branches": []
+},
+"strength": 100.0,
+"stress": 39.0,
+"stress_tree_state": {
+"current_node": "",
+"pruned_branches": []
+}
+}
+}
+dependency_graph = {
+"govt_novara": {
+"intel_novara": 0.5,
+"media_novara": 0.6,
+"military_novara": 0.8
+},
+"intel_novara": {
+"media_novara": 0.4,
+"military_novara": 0.3
+},
+"media_novara": {
+"govt_novara": 0.45
+},
+"military_novara": {
+"intel_novara": 0.75
+}
+}

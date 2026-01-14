@@ -1,68 +1,167 @@
-[gd_resource type="Resource" script_class="InstitutionConfig" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="InstitutionConfig" load_steps=2 format=3 uid="uid://bqm7lcqljdqsm"]
 
-[ext_resource type="Script" path="res://src/data/institution_config.gd" id="1"]
+[ext_resource type="Script" path="res://src/data/institution_config.gd" id="1_govt"]
 
 [resource]
-script = ExtResource("1")
-institution_id = "govt"
-institution_name = "National Assembly"
+script = ExtResource("1_govt")
+institution_id = "govt_novara"
+institution_name = "Government of Novara"
 institution_type = 2
-initial_capacity = 55.0
-initial_strength = 90.0
-initial_stress = 5.0
-initial_influence = 0.0
-player_event_tree = [{
-"node_id": "action_light",
-"title": "Lobby Backbenchers",
-"description": "Apply subtle pressure through unofficial legislative channels.",
-"conditions": {"min_influence": 10.0, "max_stress": 90.0},
-"cost": {"cash": 250.0, "bandwidth": 10.0},
-"effects": {"stress_change": 12.0, "influence_change": 4.0, "exposure_change": 3.0, "tension_change": 3.0}
-}, {
-"node_id": "action_moderate",
-"title": "Manipulate Committees",
-"description": "Control key committee appointments and agendas.",
-"conditions": {"min_influence": 30.0, "max_stress": 80.0},
-"cost": {"cash": 600.0, "bandwidth": 20.0},
-"effects": {"stress_change": 22.0, "influence_change": 7.0, "exposure_change": 6.0, "tension_change": 5.0}
-}, {
-"node_id": "action_heavy",
-"title": "Blackmail Officials",
-"description": "Use compromising information against key legislators.",
-"conditions": {"min_influence": 60.0},
-"cost": {"cash": 1200.0, "bandwidth": 35.0},
-"effects": {"stress_change": 35.0, "influence_change": 12.0, "capacity_change": -8.0, "exposure_change": 12.0, "tension_change": 10.0}
-}, {
-"node_id": "action_deep",
-"title": "Constitutional Manipulation",
-"description": "Engineer fundamental changes to legislative procedures.",
-"conditions": {"min_influence": 80.0},
-"cost": {"cash": 2500.0, "bandwidth": 50.0},
-"effects": {"stress_change": 50.0, "influence_change": 18.0, "capacity_change": -15.0, "exposure_change": 22.0, "tension_change": 18.0}
-}]
-autonomous_event_tree = [{
-"node_id": "stress_coalition_collapse",
-"trigger_type": "stress",
-"title": "Coalition Fracture",
-"description": "The governing coalition is fragmenting over policy disagreements.",
-"conditions": {"min_stress": 75.0},
-"auto_effects": {"stress_change": -18.0, "tension_change": 10.0},
-"player_choices": [{"text": "Back the opposition faction", "requires": {"min_influence": 35.0}, "cost": {"cash": 400.0, "bandwidth": 18.0}, "effects": {"influence_change": 14.0, "exposure_change": 10.0}}, {"text": "Remain neutral", "effects": {"tension_change": 4.0}}]
-}, {
-"node_id": "stress_scandal",
-"trigger_type": "stress",
-"title": "Corruption Scandal",
-"description": "Financial irregularities have been exposed in legislative budgets.",
-"conditions": {"min_stress": 85.0},
-"auto_effects": {"stress_change": -12.0, "capacity_change": -6.0, "tension_change": 14.0},
-"player_choices": [{"text": "Leak more documents", "requires": {"min_influence": 45.0}, "cost": {"cash": 300.0}, "effects": {"stress_change": 20.0, "influence_change": 8.0, "exposure_change": 15.0}}, {"text": "Help cover it up", "requires": {"min_influence": 50.0}, "cost": {"cash": 800.0}, "effects": {"influence_change": 15.0, "stress_change": -15.0, "exposure_change": 8.0}}, {"text": "Observe", "effects": {}}]
-}, {
-"node_id": "stable_reform",
-"trigger_type": "stable",
-"title": "Electoral Reform",
-"description": "There is momentum for electoral system reforms.",
-"conditions": {"max_stress": 35.0, "min_capacity": 50.0},
-"probability": 0.25,
-"auto_effects": {"capacity_change": 4.0, "strength_change": 3.0},
-"player_choices": [{"text": "Undermine reform efforts", "requires": {"min_influence": 45.0}, "cost": {"cash": 600.0, "bandwidth": 22.0}, "effects": {"stress_change": 28.0, "capacity_change": -10.0, "exposure_change": 12.0}}, {"text": "Let reforms proceed", "effects": {"influence_change": -4.0}}]
-}]
+initial_capacity = 60.0
+initial_strength = 100.0
+initial_stress = 10.0
+initial_influence = 30.0
+
+stress_triggered_tree = [
+	{
+		"node_id": "govt_stress_root",
+		"title": "Political Crisis",
+		"description": "The government is under immense pressure. Opposition parties are demanding action.",
+		"conditions": {},
+		"effects": {"influence": -5},
+		"choices": [
+			{
+				"text": "Form Emergency Coalition",
+				"next_node": "coalition_path_1",
+				"prunes_branches": ["scandal_path_1", "scandal_path_2"],
+				"effects": {"stress": +20, "capacity": -10},
+				"cost": 15,
+				"requires": {}
+			},
+			{
+				"text": "Launch Corruption Investigation",
+				"next_node": "scandal_path_1",
+				"prunes_branches": ["coalition_path_1", "coalition_path_2"],
+				"effects": {"stress": 10},
+				"cost": 10,
+				"requires": {}
+			}
+		]
+	},
+	{
+		"node_id": "coalition_path_1",
+		"title": "Coalition Negotiations",
+		"description": "Coalition partners are demanding concessions for their support.",
+		"conditions": {},
+		"effects": {},
+		"choices": [
+			{
+				"text": "Accept Their Terms",
+				"next_node": "coalition_path_2",
+				"prunes_branches": [],
+				"effects": {"stress": -15, "influence": -10},
+				"cost": 20,
+				"requires": {}
+			},
+			{
+				"text": "Negotiate Harder",
+				"next_node": "coalition_path_2",
+				"prunes_branches": [],
+				"effects": {"stress": -5, "capacity": 5},
+				"cost": 5,
+				"requires": {}
+			}
+		]
+	},
+	{
+		"node_id": "coalition_path_2",
+		"title": "Coalition Formed",
+		"description": "The coalition government is now operational. Stability returns.",
+		"conditions": {},
+		"effects": {"stress": -30, "strength": 10},
+		"choices": []
+	},
+	{
+		"node_id": "scandal_path_1",
+		"title": "Investigation Underway",
+		"description": "Investigators have uncovered ties to foreign actors. This could explode.",
+		"conditions": {},
+		"effects": {},
+		"choices": [
+			{
+				"text": "Go Public Immediately",
+				"next_node": "scandal_path_2",
+				"prunes_branches": [],
+				"effects": {"stress": -25, "influence": 15},
+				"cost": 0,
+				"requires": {}
+			},
+			{
+				"text": "Bury the Findings",
+				"next_node": "scandal_path_2",
+				"prunes_branches": [],
+				"effects": {"stress": 10, "capacity": -15},
+				"cost": 25,
+				"requires": {}
+			}
+		]
+	},
+	{
+		"node_id": "scandal_path_2",
+		"title": "Scandal Resolved",
+		"description": "The investigation has concluded. The dust settles.",
+		"conditions": {},
+		"effects": {"stress": -20},
+		"choices": []
+	}
+]
+
+randomly_triggered_tree = [
+	{
+		"node_id": "govt_random_root",
+		"title": "Budget Deliberations",
+		"description": "Annual budget discussions are heating up. Various factions want their priorities funded.",
+		"conditions": {},
+		"effects": {},
+		"choices": [
+			{
+				"text": "Prioritize Defense Spending",
+				"next_node": "budget_defense",
+				"prunes_branches": ["budget_social", "budget_balanced"],
+				"effects": {"capacity": 5},
+				"cost": 10,
+				"requires": {}
+			},
+			{
+				"text": "Prioritize Social Programs",
+				"next_node": "budget_social",
+				"prunes_branches": ["budget_defense", "budget_balanced"],
+				"effects": {"influence": 10},
+				"cost": 10,
+				"requires": {}
+			},
+			{
+				"text": "Balanced Approach",
+				"next_node": "budget_balanced",
+				"prunes_branches": ["budget_defense", "budget_social"],
+				"effects": {},
+				"cost": 5,
+				"requires": {}
+			}
+		]
+	},
+	{
+		"node_id": "budget_defense",
+		"title": "Military Modernization",
+		"description": "Defense contractors are pleased. The military gains new equipment.",
+		"conditions": {},
+		"effects": {"strength": 10, "influence": -5},
+		"choices": []
+	},
+	{
+		"node_id": "budget_social",
+		"title": "Social Investment",
+		"description": "Public services improve. Citizens are satisfied.",
+		"conditions": {},
+		"effects": {"stress": -10, "capacity": 10},
+		"choices": []
+	},
+	{
+		"node_id": "budget_balanced",
+		"title": "Steady Progress",
+		"description": "A moderate approach keeps all parties content.",
+		"conditions": {},
+		"effects": {"stress": -5, "capacity": 5, "influence": 5},
+		"choices": []
+	}
+]

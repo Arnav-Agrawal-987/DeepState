@@ -34,15 +34,36 @@ class_name SimulationRoot
 @onready var tree_type_select = $SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/TreeTypeHBox/TreeTypeSelect
 @onready var menu_button = $SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer/MenuButton
 
+# NEW: Event Queue and Crisis View UI
+@onready var view_crisis_btn = $SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer/ViewCrisisBtn
+@onready var event_queue_btn = $SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer/EventQueueBtn
+@onready var relevance_label = $SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer/RelevanceLabel
+
+@onready var event_queue_overlay = $SimulationUI/EventQueueOverlay
+@onready var event_queue_list = $SimulationUI/EventQueueOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/QueueScroll/QueueList
+@onready var close_queue_btn = $SimulationUI/EventQueueOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/CloseQueueBtn
+
+@onready var crisis_view_overlay = $SimulationUI/CrisisViewOverlay
+@onready var crisis_view_relevance = $SimulationUI/CrisisViewOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/RelevanceLabel
+@onready var crisis_list = $SimulationUI/CrisisViewOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/CrisisScroll/CrisisList
+@onready var close_crisis_btn = $SimulationUI/CrisisViewOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/CloseCrisisBtn
+
+# NEW: Default Actions UI
+@onready var default_actions_panel = $SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel
+@onready var action_inst_select = $SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel/ActionsVBox/ActionInstSelect
+@onready var actions_container = $SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel/ActionsVBox/ActionsContainer
+
 var region_config: RegionConfig
 var save_state: RegionSaveState
 var institution_configs: Dictionary = {}  # inst_id -> InstitutionConfig
 
 var pending_event_choices: Array = []
 var current_event_institution: Institution = null
+var current_pending_event_node: Dictionary = {}  # The event node being processed
+var current_pending_event_is_player_action: bool = false  # Whether current event is player-triggered
 var current_tree_type: int = 0
 
-enum TreeType { PLAYER_ACTIONS, AUTONOMOUS_EVENTS, CRISIS_TREE }
+enum TreeType { STRESS_TRIGGERED, RANDOM_TRIGGERED, CRISIS_TREE }
 
 func _ready() -> void:
 	# Initialize simulation hierarchy
@@ -58,6 +79,7 @@ func _ready() -> void:
 	event_manager.inst_manager = inst_manager
 	event_manager.player_state = player_state
 	event_manager.tension_mgr = tension_mgr
+	event_manager.dep_graph = dep_graph  # NEW: Wire dependency graph for crisis effects
 	event_manager.institution_configs = institution_configs
 	# save_state will be set after region initialization
 	
@@ -84,6 +106,18 @@ func _ready() -> void:
 	
 	print("[SimulationRoot] Initialization complete!")
 
+func _input(event: InputEvent) -> void:
+	# Quick save with F5
+	if event.is_action_pressed("ui_save") or (event is InputEventKey and event.keycode == KEY_F5 and event.pressed):
+		quick_save()
+		get_viewport().set_input_as_handled()
+	
+	# Quick load with F9
+	if event.is_action_pressed("ui_load") or (event is InputEventKey and event.keycode == KEY_F9 and event.pressed):
+		quick_load()
+		get_viewport().set_input_as_handled()
+
+
 ## Initialize region from RegionConfig (data-driven)
 func initialize_region(config: RegionConfig) -> void:
 	region_config = config
@@ -105,10 +139,15 @@ func initialize_region(config: RegionConfig) -> void:
 	for inst_id in config.get_institution_ids():
 		var inst_config = config.load_institution_config(inst_id)
 		if inst_config:
-			institution_configs[inst_id] = inst_config
+			# Use the config's institution_id as the canonical ID
+			var canonical_id = inst_config.institution_id
+			institution_configs[canonical_id] = inst_config
+			print("[SimulationRoot] Loaded config for %s: %d stress events, %d random events" % [
+				canonical_id, inst_config.stress_triggered_tree.size(), inst_config.randomly_triggered_tree.size()
+			])
 			
 			var inst = Institution.new()
-			inst.institution_id = inst_config.institution_id
+			inst.institution_id = canonical_id
 			inst.institution_name = inst_config.institution_name
 			inst.institution_type = inst_config.institution_type
 			inst.capacity = inst_config.initial_capacity
@@ -120,8 +159,8 @@ func initialize_region(config: RegionConfig) -> void:
 			# Connect stress_maxed_out signal
 			inst.stress_maxed_out.connect(_on_institution_stress_maxed.bind(inst))
 			
-			# Initialize institution state in save
-			save_state.initialize_institution(inst_id, inst_config)
+			# Initialize institution state in save using canonical ID
+			save_state.initialize_institution(canonical_id, inst_config)
 		else:
 			push_warning("Could not load institution config for: %s" % inst_id)
 	
@@ -182,11 +221,50 @@ func save_game() -> void:
 		save_state.update_institution_stat(inst.institution_id, "stress", inst.stress)
 		save_state.update_institution_stat(inst.institution_id, "influence", inst.player_influence)
 	
-	# Save to file
-	var save_path = "user://saves/%s.tres" % region_config.region_id
-	DirAccess.make_dir_recursive_absolute("user://saves")
-	save_state.save_to_file(save_path)
-	print("Game saved to: %s" % save_path)
+	# Save to file using new path structure
+	save_state.save_to_file(region_config.region_id)
+	print("Game saved to: %s" % (RegionSaveState.SAVE_DIR + region_config.region_id + ".tres"))
+
+## Load game state from file
+func load_game(save_filename: String = "") -> bool:
+	if save_filename == "" and region_config:
+		save_filename = region_config.region_id
+	
+	var loaded_save = RegionSaveState.load_from_file(save_filename)
+	if not loaded_save:
+		push_error("Failed to load save file: %s" % save_filename)
+		return false
+	
+	# Load the save state
+	load_save_state(loaded_save)
+	print("Game loaded: %s" % save_filename)
+	return true
+
+## Quick save (to default location)
+func quick_save() -> void:
+	save_game()
+	_log_console("✓ Game saved (Day %d)" % clock.get_current_day())
+
+## Quick load (from default location)
+func quick_load() -> void:
+	if load_game():
+		_log_console("✓ Game loaded (Day %d)" % clock.get_current_day())
+		_refresh_ui()
+	else:
+		_log_console("✗ No save file found")
+
+## Refresh UI after loading
+func _refresh_ui() -> void:
+	# Update player dashboard
+	_update_dashboard()
+	
+	# Refresh institution cards
+	_setup_ui()
+	
+	# Refresh event tree viewer
+	_refresh_event_tree()
+
+
 
 ## Start game loop
 func start_simulation() -> void:
@@ -245,36 +323,42 @@ func _end_game_lost() -> void:
 func _on_crisis(epicenter: Institution) -> void:
 	print("Crisis triggered at %s" % epicenter.institution_name)
 
-## Institution stress reached 100% - trigger immediate event
+## Institution stress reached 100% - queue event for processing
 func _on_institution_stress_maxed(institution: Institution) -> void:
 	_log_console("⚠ %s stress maxed out!" % institution.institution_name)
 	
-	# Find stress_max events from config
+	# Queue the event to pending events instead of showing immediately
 	if institution.institution_id in institution_configs:
-		var config = institution_configs[institution.institution_id]
+		var config: InstitutionConfig = institution_configs[institution.institution_id]
 		
-		# Look for stress_max trigger events
-		for event_node in config.autonomous_event_tree:
-			if event_node.get("trigger_type") == "stress_max":
-				# Process the event
-				var choices = event_manager.process_autonomous_event(event_node, institution)
-				
-				# Show event dialog immediately
-				show_event_dialog(event_node, institution, choices)
-				return
+		print("[SimulationRoot] Stress maxed for %s - queueing event" % institution.institution_id)
 		
-		# Fallback: create a generic stress max event if none defined
-		var fallback_event = {
-			"title": "Critical Breakdown",
-			"description": "%s has reached maximum stress! The institution is on the verge of collapse." % institution.institution_name,
-			"auto_effects": {"tension_change": 10.0, "capacity_change": -5.0},
-			"player_choices": [
-				{"label": "Intervene", "cost": {"cash": 200.0}, "effects": {"stress_change": -30.0, "influence_change": 10.0}},
-				{"label": "Do Nothing", "cost": {}, "effects": {"strength_change": -10.0}}
-			]
-		}
-		event_manager.apply_effects(fallback_event["auto_effects"], institution)
-		show_event_dialog(fallback_event, institution, fallback_event["player_choices"])
+		# Get current stress event from tree
+		var tree_state = save_state.get_stress_tree_state(institution.institution_id) if save_state else {"current_node": "", "pruned_branches": []}
+		var current_node = tree_state.get("current_node", "")
+		var pruned_branches = tree_state.get("pruned_branches", [])
+		
+		var event_node = config.get_current_stress_event(current_node, pruned_branches)
+		
+		if not event_node.is_empty():
+			# Add to event manager's pending events queue
+			var event_key = {
+				"event": event_node,
+				"type": EventManager.EventType.STRESS,
+				"inst_id": institution.institution_id
+			}
+			event_manager.pending_events[event_key] = institution
+			_log_console("📢 Event queued: %s" % event_node.get("title", "?"))
+			
+			# If no event is currently being shown, show this one
+			if not event_dialog.visible:
+				_show_pending_events_as_dialogs()
+			return
+	else:
+		push_warning("[SimulationRoot] No config found for institution: %s" % institution.institution_id)
+	
+	# If we get here, there's no valid event - just log it
+	_log_console("⚠ No stress event defined for %s - stress remains maxed" % institution.institution_name)
 
 ## Setup test region for development (data-driven)
 func _setup_test_region() -> void:
@@ -321,13 +405,9 @@ func _create_fallback_test_region() -> void:
 		# Connect stress_maxed_out signal
 		inst.stress_maxed_out.connect(_on_institution_stress_maxed.bind(inst))
 		
-		# Create default InstitutionConfig for actions
-		var inst_config = InstitutionConfig.new()
-		inst_config.institution_id = data["id"]
-		inst_config.institution_name = data["name"]
-		inst_config.create_default_player_tree()
-		inst_config.create_default_autonomous_tree()
-		institution_configs[data["id"]] = inst_config
+		# Note: InstitutionConfig should be loaded from .tres files, not created here
+		# For test mode without proper region data, events will not be available
+		push_warning("Test region: No InstitutionConfig for %s - events disabled" % data["id"])
 	
 	# Add dependencies
 	config.add_dependency("govt", "military", 0.8)
@@ -359,11 +439,368 @@ func _setup_ui() -> void:
 	if event_close_btn:
 		event_close_btn.pressed.connect(_on_event_close)
 	
+	# Connect NEW UI buttons
+	if view_crisis_btn:
+		view_crisis_btn.pressed.connect(_on_view_crisis_pressed)
+	if event_queue_btn:
+		event_queue_btn.pressed.connect(_on_event_queue_pressed)
+	if close_queue_btn:
+		close_queue_btn.pressed.connect(_on_close_queue_pressed)
+	if close_crisis_btn:
+		close_crisis_btn.pressed.connect(_on_close_crisis_pressed)
+	
+	# Setup default actions panel
+	_setup_default_actions_ui()
+	
+	# Connect event queue changed signal
+	event_manager.event_queue_changed.connect(_update_queue_buttons)
+	event_manager.crisis_triggered.connect(_on_crisis_events_triggered)
+	
 	# Update dashboard
 	_update_dashboard()
 	
 	# Add to simulation_root group for callback
 	add_to_group("simulation_root")
+
+## Setup default actions UI
+func _setup_default_actions_ui() -> void:
+	if not action_inst_select:
+		return
+	
+	# Populate institution dropdown for default actions
+	action_inst_select.clear()
+	for inst_id in institution_configs:
+		var config = institution_configs[inst_id]
+		action_inst_select.add_item(config.institution_name)
+		action_inst_select.set_item_metadata(action_inst_select.item_count - 1, inst_id)
+	
+	# Connect signal
+	action_inst_select.item_selected.connect(_on_action_inst_select_changed)
+	
+	# Initial display
+	if action_inst_select.item_count > 0:
+		action_inst_select.select(0)
+		_refresh_default_actions()
+
+## Refresh default actions for selected institution
+## Shows ALL 5 actions with locked/unlocked state based on influence
+func _refresh_default_actions() -> void:
+	if not actions_container:
+		return
+	
+	# Clear existing buttons
+	for child in actions_container.get_children():
+		child.queue_free()
+	
+	var selected_idx = action_inst_select.selected
+	if selected_idx < 0:
+		return
+	
+	var inst_id = action_inst_select.get_item_metadata(selected_idx)
+	var institution = inst_manager.get_institution(inst_id)
+	if not institution:
+		return
+	
+	# Show current influence
+	var inf_label = Label.new()
+	inf_label.text = "Influence: %.0f%%" % institution.player_influence
+	inf_label.add_theme_color_override("font_color", Color(0.5, 0.8, 1.0))
+	actions_container.add_child(inf_label)
+	
+	# Get ALL default actions (always returns 5)
+	var all_actions = event_manager.get_default_actions(institution)
+	
+	# Create buttons for each action
+	for action in all_actions:
+		var button = Button.new()
+		var title = action.get("title", "Unknown")
+		var cost = action.get("cost", {})
+		var required_inf = action.get("required_influence", 0)
+		var is_unlocked = action.get("unlocked", false)
+		
+		# Format button text with cost and influence requirement
+		var cost_text = _format_action_cost(cost)
+		if is_unlocked:
+			button.text = title if cost_text.is_empty() else "%s (%s)" % [title, cost_text]
+		else:
+			button.text = "🔒 %s [%d+ inf]" % [title, required_inf]
+			button.disabled = true
+			button.modulate = Color(0.5, 0.5, 0.5)
+		
+		button.tooltip_text = _format_action_tooltip(action)
+		
+		# Connect with action data (only if unlocked)
+		if is_unlocked:
+			button.pressed.connect(_on_default_action_pressed.bind(action, institution))
+		
+		actions_container.add_child(button)
+
+## Format cost for action button
+func _format_action_cost(cost: Dictionary) -> String:
+	var parts: Array = []
+	if cost.get("bandwidth", 0) > 0:
+		parts.append("%d BW" % cost["bandwidth"])
+	if cost.get("cash", 0) > 0:
+		parts.append("$%d" % cost["cash"])
+	return ", ".join(parts)
+
+## Format tooltip for default action
+func _format_action_tooltip(action: Dictionary) -> String:
+	var lines: Array = []
+	lines.append(action.get("title", "Unknown"))
+	lines.append(action.get("description", ""))
+	lines.append("")
+	
+	var required_inf = action.get("required_influence", 0)
+	lines.append("Required Influence: %d" % required_inf)
+	
+	var effects = action.get("effects", {})
+	if not effects.is_empty():
+		lines.append("")
+		lines.append("== Effects ==")
+		for key in effects:
+			lines.append("  %s: %+d" % [key.capitalize(), effects[key]])
+	
+	var inf_change = action.get("influence_change", 0)
+	if inf_change != 0:
+		lines.append("")
+		lines.append("Influence Change: %+d" % inf_change)
+	
+	return "\n".join(lines)
+
+## Handle default action button pressed
+func _on_default_action_pressed(action: Dictionary, institution: Institution) -> void:
+	var success = event_manager.execute_default_action(action, institution)
+	if success:
+		_log_console("Executed: %s on %s" % [action.get("title", "?"), institution.institution_name])
+		_update_dashboard()
+		_refresh_default_actions()
+		_refresh_event_tree()
+	else:
+		_log_console("Cannot afford: %s" % action.get("title", "?"))
+
+## Action institution select changed
+func _on_action_inst_select_changed(_index: int) -> void:
+	_refresh_default_actions()
+
+## Update queue button counts
+func _update_queue_buttons() -> void:
+	var event_count = event_manager.get_pending_events().size()
+	var crisis_count = event_manager.get_pending_crisis_events().size()
+	
+	if event_queue_btn:
+		event_queue_btn.text = "Event Queue (%d)" % event_count
+	if view_crisis_btn:
+		view_crisis_btn.text = "View Crisis (%d)" % crisis_count
+		view_crisis_btn.modulate = Color.RED if crisis_count > 0 else Color.WHITE
+
+## Handle View Crisis button
+func _on_view_crisis_pressed() -> void:
+	_show_crisis_view()
+
+## Handle Event Queue button
+func _on_event_queue_pressed() -> void:
+	_show_event_queue()
+
+## Handle close queue button
+func _on_close_queue_pressed() -> void:
+	event_queue_overlay.visible = false
+
+## Handle close crisis button
+func _on_close_crisis_pressed() -> void:
+	crisis_view_overlay.visible = false
+
+## Show event queue overlay
+func _show_event_queue() -> void:
+	# Clear existing items
+	for child in event_queue_list.get_children():
+		child.queue_free()
+	
+	var pending = event_manager.get_pending_events()
+	
+	if pending.is_empty():
+		var label = Label.new()
+		label.text = "No pending events"
+		label.modulate = Color(0.6, 0.6, 0.6)
+		event_queue_list.add_child(label)
+	else:
+		for event_key in pending:
+			var event_data = event_key.get("event", {})
+			var event_type = event_key.get("type", EventManager.EventType.STRESS)
+			var institution = pending[event_key]
+			
+			var panel = PanelContainer.new()
+			var vbox = VBoxContainer.new()
+			panel.add_child(vbox)
+			
+			# Title
+			var title_label = Label.new()
+			var type_str = EventManager.EventType.keys()[event_type]
+			var inst_name = institution.institution_name if institution else "Global"
+			title_label.text = "[%s] %s" % [type_str, event_data.get("title", "Unknown")]
+			title_label.add_theme_font_size_override("font_size", 14)
+			vbox.add_child(title_label)
+			
+			# Institution
+			var inst_label = Label.new()
+			inst_label.text = "Institution: %s" % inst_name
+			inst_label.modulate = Color(0.7, 0.7, 0.7)
+			vbox.add_child(inst_label)
+			
+			# Description
+			var desc_label = Label.new()
+			desc_label.text = event_data.get("description", "")
+			desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			vbox.add_child(desc_label)
+			
+			# Effects already applied
+			var effects = event_data.get("effects", {})
+			if not effects.is_empty():
+				var effects_label = Label.new()
+				var effects_parts: Array = []
+				for key in effects:
+					effects_parts.append("%s: %+d" % [key, effects[key]])
+				effects_label.text = "Effects (applied): " + ", ".join(effects_parts)
+				effects_label.modulate = Color(0.5, 0.7, 1.0)
+				vbox.add_child(effects_label)
+			
+			# Respond button
+			var respond_btn = Button.new()
+			respond_btn.text = "Respond to Event"
+			respond_btn.pressed.connect(_on_queue_event_respond.bind(event_key))
+			vbox.add_child(respond_btn)
+			
+			event_queue_list.add_child(panel)
+	
+	event_queue_overlay.visible = true
+
+## Handle respond to event from queue
+func _on_queue_event_respond(event_key: Dictionary) -> void:
+	event_queue_overlay.visible = false
+	_show_pending_event_dialog(event_key)
+
+## Show pending event dialog for a specific event
+func _show_pending_event_dialog(event_key: Dictionary) -> void:
+	var event_data = event_key.get("event", {})
+	var institution = event_manager.get_pending_events().get(event_key)
+	var choices = event_data.get("choices", [])
+	
+	show_event_dialog(event_data, institution, choices, false)
+	_current_pending_event_key = event_key
+
+## Show crisis view overlay
+func _show_crisis_view() -> void:
+	# Clear existing items
+	for child in crisis_list.get_children():
+		child.queue_free()
+	
+	# Update relevance display
+	var insts = inst_manager.get_all_institutions()
+	var relevance = player_state.calculate_relevance(insts)
+	crisis_view_relevance.text = "Your Relevance: %.1f%%" % relevance
+	
+	var crises = event_manager.get_pending_crisis_events()
+	
+	if crises.is_empty():
+		var label = Label.new()
+		label.text = "No active crises"
+		label.modulate = Color(0.6, 0.6, 0.6)
+		crisis_list.add_child(label)
+	else:
+		for i in range(crises.size()):
+			var crisis_data = crises[i]
+			var event_data = crisis_data.get("event", {})
+			
+			var panel = PanelContainer.new()
+			var vbox = VBoxContainer.new()
+			panel.add_child(vbox)
+			
+			# Title
+			var title_label = Label.new()
+			title_label.text = "⚠ %s" % event_data.get("title", "Unknown Crisis")
+			title_label.add_theme_font_size_override("font_size", 16)
+			title_label.add_theme_color_override("font_color", Color(1, 0.3, 0.3))
+			vbox.add_child(title_label)
+			
+			# Description
+			var desc_label = Label.new()
+			desc_label.text = event_data.get("description", "")
+			desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			vbox.add_child(desc_label)
+			
+			# Effects already applied
+			var effects = event_data.get("effects", {})
+			if not effects.is_empty():
+				var effects_label = Label.new()
+				var effects_parts: Array = []
+				for key in effects:
+					effects_parts.append("%s: %+d" % [key, effects[key]])
+				effects_label.text = "Crisis Effects (applied): " + ", ".join(effects_parts)
+				effects_label.modulate = Color(1, 0.7, 0.3)
+				vbox.add_child(effects_label)
+			
+			# Choices
+			var choices = event_data.get("choices", [])
+			if not choices.is_empty():
+				var choices_label = Label.new()
+				choices_label.text = "Response Options:"
+				vbox.add_child(choices_label)
+				
+				for j in range(choices.size()):
+					var choice = choices[j]
+					var choice_btn = Button.new()
+					choice_btn.text = choice.get("text", "Option %d" % (j + 1))
+					choice_btn.tooltip_text = _format_choice_tooltip(choice)
+					choice_btn.pressed.connect(_on_crisis_choice_selected.bind(i, j))
+					vbox.add_child(choice_btn)
+			
+			crisis_list.add_child(panel)
+	
+	crisis_view_overlay.visible = true
+
+## Format choice tooltip
+func _format_choice_tooltip(choice: Dictionary) -> String:
+	var lines: Array = []
+	lines.append(choice.get("text", ""))
+	
+	var cost = choice.get("cost", {})
+	if cost is Dictionary and not cost.is_empty():
+		lines.append("")
+		lines.append("Cost:")
+		if cost.get("bandwidth", 0) > 0:
+			lines.append("  Bandwidth: %d" % cost["bandwidth"])
+		if cost.get("cash", 0) > 0:
+			lines.append("  Cash: $%d" % cost["cash"])
+	elif cost is int and cost > 0:
+		lines.append("")
+		lines.append("Cost: %d bandwidth" % cost)
+	
+	var effects = choice.get("effects", {})
+	if not effects.is_empty():
+		lines.append("")
+		lines.append("Effects:")
+		for key in effects:
+			lines.append("  %s: %+d" % [key.capitalize(), effects[key]])
+	
+	return "\n".join(lines)
+
+## Handle crisis choice selected
+func _on_crisis_choice_selected(crisis_index: int, choice_index: int) -> void:
+	event_manager.resolve_crisis_event(crisis_index, choice_index)
+	_update_dashboard()
+	_refresh_event_tree()
+	_update_queue_buttons()
+	
+	# Refresh crisis view if still open
+	if crisis_view_overlay.visible:
+		_show_crisis_view()
+
+## Handle crisis events triggered (shows relevance notification)
+func _on_crisis_events_triggered(crisis_events: Array) -> void:
+	var insts = inst_manager.get_all_institutions()
+	var relevance = player_state.calculate_relevance(insts)
+	_log_console("⚠ CRISIS TRIGGERED! Your relevance: %.1f%%" % relevance)
+	_update_queue_buttons()
 
 ## Setup event tree UI
 func _setup_event_tree_ui() -> void:
@@ -374,10 +811,10 @@ func _setup_event_tree_ui() -> void:
 		institution_select.add_item(config.institution_name)
 		institution_select.set_item_metadata(institution_select.item_count - 1, inst_id)
 	
-	# Populate tree type dropdown
+	# Populate tree type dropdown with NEW types
 	tree_type_select.clear()
-	tree_type_select.add_item("Player Actions", TreeType.PLAYER_ACTIONS)
-	tree_type_select.add_item("Autonomous Events", TreeType.AUTONOMOUS_EVENTS)
+	tree_type_select.add_item("Stress Triggered", TreeType.STRESS_TRIGGERED)
+	tree_type_select.add_item("Random Triggered", TreeType.RANDOM_TRIGGERED)
 	tree_type_select.add_item("Crisis Tree", TreeType.CRISIS_TREE)
 	
 	# Connect signals
@@ -411,50 +848,148 @@ func _refresh_event_tree() -> void:
 	var inst_id = institution_select.get_item_metadata(selected_idx)
 	
 	match current_tree_type:
-		TreeType.PLAYER_ACTIONS:
-			_build_player_action_tree(root, inst_id)
-		TreeType.AUTONOMOUS_EVENTS:
-			_build_autonomous_event_tree(root, inst_id)
+		TreeType.STRESS_TRIGGERED:
+			_build_stress_triggered_tree(root, inst_id)
+		TreeType.RANDOM_TRIGGERED:
+			_build_random_triggered_tree(root, inst_id)
 		TreeType.CRISIS_TREE:
 			_build_crisis_tree(root)
 
-## Build player action tree
-func _build_player_action_tree(root: TreeItem, inst_id: String) -> void:
+func _build_stress_triggered_tree(root: TreeItem, inst_id: String) -> void:
 	if inst_id not in institution_configs:
 		return
 	
-	var config = institution_configs[inst_id]
-	for action_node in config.player_event_tree:
-		var item = event_tree.create_item(root)
-		var title = action_node.get("title", "Unknown")
-		var conditions = action_node.get("conditions", {})
-		
-		var display = title
-		if conditions.get("min_influence", 0) > 0:
-			display += " [Inf>=%d]" % conditions["min_influence"]
-		
-		item.set_text(0, display)
-		item.set_metadata(0, {"type": "player", "node": action_node, "inst_id": inst_id})
+	var config: InstitutionConfig = institution_configs[inst_id]
+	
+	# Get tree state from save
+	var tree_state = save_state.get_stress_tree_state(inst_id) if save_state else {"current_node": "", "pruned_branches": []}
+	var current_node = tree_state.get("current_node", "")
+	var pruned_branches = tree_state.get("pruned_branches", [])
+	
+	# Build node map for hierarchy
+	var node_map: Dictionary = {}
+	for node in config.stress_triggered_tree:
+		var node_id = node.get("node_id", "")
+		if node_id != "":
+			node_map[node_id] = node
+	
+	# Find child nodes (referenced by next_node)
+	var child_nodes: Dictionary = {}
+	for node in config.stress_triggered_tree:
+		for choice in node.get("choices", []):
+			var next_node = choice.get("next_node", "")
+			if next_node != "":
+				child_nodes[next_node] = node.get("node_id", "")
+	
+	# Find root nodes
+	var root_nodes: Array = []
+	for node in config.stress_triggered_tree:
+		var node_id = node.get("node_id", "")
+		if node_id not in child_nodes:
+			root_nodes.append(node)
+	
+	# Build tree from root nodes
+	for node in root_nodes:
+		_add_new_tree_node(root, node, node_map, current_node, pruned_branches, inst_id, "stress")
 
-## Build autonomous event tree
-func _build_autonomous_event_tree(root: TreeItem, inst_id: String) -> void:
+## Build randomly-triggered event tree (NEW)
+func _build_random_triggered_tree(root: TreeItem, inst_id: String) -> void:
 	if inst_id not in institution_configs:
 		return
 	
-	var config = institution_configs[inst_id]
-	for event_node in config.autonomous_event_tree:
-		var item = event_tree.create_item(root)
-		var title = event_node.get("title", "Unknown")
-		var trigger = event_node.get("trigger_conditions", {})
+	var config: InstitutionConfig = institution_configs[inst_id]
+	
+	# Get tree state from save
+	var tree_state = save_state.get_random_tree_state(inst_id) if save_state else {"current_node": "", "pruned_branches": []}
+	var current_node = tree_state.get("current_node", "")
+	var pruned_branches = tree_state.get("pruned_branches", [])
+	
+	# Build node map for hierarchy
+	var node_map: Dictionary = {}
+	for node in config.randomly_triggered_tree:
+		var node_id = node.get("node_id", "")
+		if node_id != "":
+			node_map[node_id] = node
+	
+	# Find child nodes (referenced by next_node)
+	var child_nodes: Dictionary = {}
+	for node in config.randomly_triggered_tree:
+		for choice in node.get("choices", []):
+			var next_node = choice.get("next_node", "")
+			if next_node != "":
+				child_nodes[next_node] = node.get("node_id", "")
+	
+	# Find root nodes
+	var root_nodes: Array = []
+	for node in config.randomly_triggered_tree:
+		var node_id = node.get("node_id", "")
+		if node_id not in child_nodes:
+			root_nodes.append(node)
+	
+	# Build tree from root nodes
+	for node in root_nodes:
+		_add_new_tree_node(root, node, node_map, current_node, pruned_branches, inst_id, "random")
+
+## Add a node to the new tree structure (stress/random)
+func _add_new_tree_node(parent_item: TreeItem, node: Dictionary, node_map: Dictionary, current_node: String, pruned_branches: Array, inst_id: String, tree_type: String) -> void:
+	var node_id = node.get("node_id", "")
+	var title = node.get("title", "Unknown")
+	var conditions = node.get("conditions", {})
+	var choices = node.get("choices", [])
+	
+	var item = event_tree.create_item(parent_item)
+	
+	# Determine node status
+	var is_current = (node_id == current_node) or (current_node == "" and parent_item == event_tree.get_root())
+	var is_pruned = node_id in pruned_branches
+	
+	# Build display text
+	var status_icon = ""
+	if is_pruned:
+		status_icon = "✗ "
+	elif is_current:
+		status_icon = "▶ "  # Current/active node
+	else:
+		status_icon = "○ "
+	
+	var display = "%s[%s] %s" % [status_icon, node_id, title]
+	
+	# Add condition hints
+	var cond_parts: Array = []
+	for key in conditions:
+		cond_parts.append("%s: %s" % [key, conditions[key]])
+	if not cond_parts.is_empty():
+		display += " {%s}" % ", ".join(cond_parts)
+	
+	item.set_text(0, display)
+	item.set_metadata(0, {"type": tree_type, "node": node, "inst_id": inst_id})
+	
+	# Color based on status
+	if is_pruned:
+		item.set_custom_color(0, Color(0.9, 0.3, 0.3))  # Red
+	elif is_current:
+		item.set_custom_color(0, Color(0.3, 0.9, 0.5))  # Green
+	
+	# Add choices as children
+	for i in range(choices.size()):
+		var choice = choices[i]
+		var choice_text = choice.get("text", "Choice %d" % (i + 1))
+		var next_node_id = choice.get("next_node", "")
+		var prunes = choice.get("prunes_branches", [])
 		
-		var display = title
-		if trigger.get("stress_above", 0) > 0:
-			display += " [Stress>%d]" % trigger["stress_above"]
-		elif trigger.get("strength_below", 0) > 0:
-			display += " [Str<%d]" % trigger["strength_below"]
+		var choice_item = event_tree.create_item(item)
+		var choice_display = "→ %s" % choice_text
+		if not prunes.is_empty():
+			choice_display += " [PRUNES: %s]" % ", ".join(prunes)
 		
-		item.set_text(0, display)
-		item.set_metadata(0, {"type": "autonomous", "node": event_node, "inst_id": inst_id})
+		choice_item.set_text(0, choice_display)
+		choice_item.set_metadata(0, {"type": "choice", "choice": choice, "parent_node": node, "choice_index": i})
+		choice_item.set_custom_color(0, Color(0.6, 0.8, 1.0))  # Light blue
+		
+		# Add next node as child of choice
+		if next_node_id != "" and next_node_id in node_map:
+			var next_node = node_map[next_node_id]
+			_add_new_tree_node(choice_item, next_node, node_map, current_node, pruned_branches, inst_id, tree_type)
 
 ## Build crisis tree
 func _build_crisis_tree(root: TreeItem) -> void:
@@ -517,7 +1052,14 @@ func _on_resume_pressed() -> void:
 
 ## Save button pressed
 func _on_save_pressed() -> void:
-	save_game()
+	quick_save()
+	# Keep menu open but show feedback
+	_log_console("✓ Game saved successfully!")
+
+## Load button pressed (if exists)
+func _on_load_pressed() -> void:
+	quick_load()
+	pause_menu.visible = false
 	_log_console("Game saved!")
 
 ## Main menu button pressed
@@ -529,9 +1071,11 @@ func _on_quit_pressed() -> void:
 	get_tree().quit()
 
 ## Show event dialog with choices
-func show_event_dialog(event_node: Dictionary, institution: Institution, choices: Array) -> void:
+func show_event_dialog(event_node: Dictionary, institution: Institution, choices: Array, is_player_action: bool = false) -> void:
 	current_event_institution = institution
 	pending_event_choices = choices
+	current_pending_event_node = event_node
+	current_pending_event_is_player_action = is_player_action
 	
 	event_title.text = event_node.get("title", "Event")
 	event_description.text = event_node.get("description", "Something has happened...")
@@ -560,14 +1104,18 @@ func show_event_dialog(event_node: Dictionary, institution: Institution, choices
 			var btn = Button.new()
 			btn.custom_minimum_size = Vector2(0, 40)
 			
-			var label = choice.get("label", "Choice %d" % (i + 1))
-			var cost = choice.get("cost", {})
-			if not cost.is_empty():
-				var cost_parts = []
+			# Support both "label" and "text" keys for backwards compatibility
+			var label = choice.get("label", choice.get("text", "Choice %d" % (i + 1)))
+			var cost = choice.get("cost", 0)
+			var cost_parts = []
+			if cost is int and cost > 0:
+				cost_parts.append("%d BW" % cost)
+			elif cost is Dictionary and not cost.is_empty():
 				if cost.get("cash", 0) > 0:
 					cost_parts.append("$%.0f" % cost["cash"])
 				if cost.get("bandwidth", 0) > 0:
 					cost_parts.append("%.0f BW" % cost["bandwidth"])
+			if not cost_parts.is_empty():
 				label += " (%s)" % ", ".join(cost_parts)
 			
 			btn.text = label
@@ -585,26 +1133,64 @@ func _on_event_choice_selected(choice_index: int) -> void:
 	var cost = choice.get("cost", {})
 	var effects = choice.get("effects", {})
 	
+	# Handle cost - support both number and dictionary format
+	var cash_cost = 0.0
+	var bandwidth_cost = 0.0
+	if typeof(cost) == TYPE_DICTIONARY:
+		cash_cost = cost.get("cash", 0.0)
+		bandwidth_cost = cost.get("bandwidth", 0.0)
+	elif typeof(cost) == TYPE_FLOAT or typeof(cost) == TYPE_INT:
+		cash_cost = float(cost)  # Simple cost = cash cost
+	
 	# Check cost
-	if cost.get("cash", 0) > player_state.cash:
+	if cash_cost > player_state.cash:
 		_log_console("Not enough cash!")
 		return
-	if cost.get("bandwidth", 0) > player_state.bandwidth:
+	if bandwidth_cost > player_state.bandwidth:
 		_log_console("Not enough bandwidth!")
 		return
 	
 	# Spend cost
-	if cost.get("cash", 0) > 0:
-		player_state.spend_cash(cost["cash"])
-	if cost.get("bandwidth", 0) > 0:
-		player_state.spend_bandwidth(cost["bandwidth"])
+	if cash_cost > 0:
+		player_state.spend_cash(cash_cost)
+	if bandwidth_cost > 0:
+		player_state.spend_bandwidth(bandwidth_cost)
 	
-	# Apply effects
+	# Apply effects to institution
 	if current_event_institution:
 		event_manager.apply_effects(effects, current_event_institution)
 	
-	_log_console("Chose: %s" % choice.get("label", "Unknown"))
+	# Update tree state with branching
+	if save_state and current_pending_event_node:
+		var node_id = current_pending_event_node.get("node_id", "")
+		var next_node = choice.get("next_node", "")
+		var prunes = choice.get("prunes_branches", [])
+		
+		print("[SimulationRoot] Recording choice - node: %s, next: %s, prunes: %s" % [node_id, next_node, str(prunes)])
+		
+		# Determine event type by checking which tree contains this node
+		if current_event_institution:
+			var inst_id = current_event_institution.institution_id
+			if inst_id in institution_configs:
+				var config: InstitutionConfig = institution_configs[inst_id]
+				
+				# Check if this is a stress event
+				var is_stress_event = false
+				for event in config.stress_triggered_tree:
+					if event.get("node_id", "") == node_id:
+						is_stress_event = true
+						break
+				
+				if is_stress_event:
+					save_state.record_stress_event(inst_id, node_id, choice)
+				else:
+					save_state.record_random_event(inst_id, node_id, choice)
+	
+	# Support both "label" and "text" keys
+	var choice_label = choice.get("label", choice.get("text", "Unknown"))
+	_log_console("Chose: %s" % choice_label)
 	_update_dashboard()
+	_refresh_event_tree()  # Refresh tree to show updated state
 	event_dialog.visible = false
 
 ## Close event dialog
@@ -626,14 +1212,11 @@ func _connect_debug_buttons() -> void:
 		"AdvanceDayBtn": _on_debug_advance_day,
 		"AddStressBtn": _on_debug_add_stress,
 		"AddTensionBtn": _on_debug_add_tension,
-		"TriggerCrisisBtn": _on_debug_trigger_crisis,
 	}
 	
 	var buttons_row2 := {
 		"AddCashBtn": _on_debug_add_cash,
 		"AddBandwidthBtn": _on_debug_add_bandwidth,
-		"AddInfluenceBtn": _on_debug_add_influence,
-		"TestEventBtn": _on_debug_test_event,
 	}
 
 	for btn_name in buttons_row1.keys():
@@ -655,31 +1238,70 @@ func _connect_debug_buttons() -> void:
 ## DEBUG: Advance to next day
 func _on_debug_advance_day() -> void:
 	var insts = inst_manager.get_all_institutions()
-	var events_to_show: Array = []
 	
+	# Step 0: Apply delayed effects from previous day's decisions
+	print("[SimulationRoot] === APPLYING DELAYED EFFECTS FROM YESTERDAY ===")
+	event_manager.apply_queued_effects()
+	
+	# Step 1: Daily updates for all institutions
 	for inst in insts:
 		inst.daily_auto_update()
 		inst.apply_stress_decay()
-		
-		# Check autonomous events
-		if inst.institution_id in institution_configs:
-			var config = institution_configs[inst.institution_id]
-			var triggered_events = event_manager.check_autonomous_events(inst, config)
-			for event_node in triggered_events:
-				var choices = event_manager.process_autonomous_event(event_node, inst)
-				if not choices.is_empty():
-					events_to_show.append({"event": event_node, "institution": inst, "choices": choices})
-					_log_console("[Event] %s: %s" % [inst.institution_name, event_node.get("title", "Unknown")])
 	
+	# Step 2: Collect day start events using new system
+	# Note: This also triggers exposure increase and autonomous effects when events trigger
+	var pending = event_manager.collect_day_start_events(insts, region_config)
+	
+	# Step 3: End of day updates
 	player_state.decay_exposure()
 	clock.current_day += 1
 	_log_console("Day advanced to: %d" % clock.current_day)
 	_update_dashboard()
 	
-	# Show first event with choices (queue others)
-	if not events_to_show.is_empty():
-		var first = events_to_show[0]
-		show_event_dialog(first["event"], first["institution"], first["choices"])
+	# Step 4: Display pending events as bubbles (for now, show count)
+	if not pending.is_empty():
+		_log_console("📢 %d events triggered! (Events shown as bubbles)" % pending.size())
+		# For now, show each event in a dialog sequentially
+		# TODO: Replace with UI bubbles system
+		_show_pending_events_as_dialogs()
+
+## Show pending events as dialogs (temporary until bubble UI is implemented)
+func _show_pending_events_as_dialogs() -> void:
+	var pending = event_manager.get_pending_events()
+	if pending.is_empty():
+		return
+	
+	# Get first event to show
+	var first_key = pending.keys()[0]
+	var event_data = first_key.get("event", {})
+	var event_type = first_key.get("type", EventManager.EventType.STRESS)
+	var institution = pending[first_key]
+	
+	# Convert to dialog format
+	var choices = event_data.get("choices", [])
+	show_event_dialog(event_data, institution, choices, false)
+	
+	# Store for resolution
+	_current_pending_event_key = first_key
+
+## Current pending event key being displayed
+var _current_pending_event_key: Dictionary = {}
+
+## Handle event choice when using new system
+func _on_new_event_choice_selected(choice_index: int) -> void:
+	if _current_pending_event_key.is_empty():
+		return
+	
+	# Use the new resolve_event method
+	event_manager.resolve_event(_current_pending_event_key, choice_index)
+	_current_pending_event_key = {}
+	
+	_update_dashboard()
+	_refresh_event_tree()
+	event_dialog.visible = false
+	
+	# Show next event if any
+	_show_pending_events_as_dialogs()
 
 ## DEBUG: Add stress to random institution
 func _on_debug_add_stress() -> void:
@@ -691,18 +1313,316 @@ func _on_debug_add_stress() -> void:
 	target.apply_stress(20.0)
 	_log_console("Added 20 stress to %s (stress: %.1f)" % [target.institution_name, target.stress])
 
-## DEBUG: Add global tension
+## DEBUG: Add global tension and auto-trigger crisis at threshold
 func _on_debug_add_tension() -> void:
 	tension_mgr.add_tension(10.0)
-	_log_console("Added 10 tension (total: %.1f)" % tension_mgr.global_tension)
+	_log_console("Added 10 tension (total: %.1f / %.1f)" % [tension_mgr.global_tension, tension_mgr.crisis_threshold])
 	_update_dashboard()
+	
+	# Auto-trigger crisis when tension reaches threshold
+	if tension_mgr.check_crisis():
+		_auto_trigger_crisis()
 
-## DEBUG: Trigger crisis immediately
-func _on_debug_trigger_crisis() -> void:
+## Auto-trigger crisis when tension reaches threshold
+## Shows EMERGENCY POPUP immediately - crisis affects global graph
+func _auto_trigger_crisis() -> void:
+	_log_console("🚨 CRISIS TRIGGERED! Tension threshold reached!")
+	
+	# Get epicenter (highest stress institution)
 	var epicenter = tension_mgr.get_crisis_epicenter(inst_manager)
-	if epicenter:
-		_log_console("DEBUG: Triggering crisis at %s" % epicenter.institution_name)
-		_evaluate_crisis(epicenter)
+	if not epicenter:
+		push_warning("[Crisis] No epicenter found")
+		return
+	
+	print("")
+	print("╔══════════════════════════════════════════════════════════════╗")
+	print("║           🚨 CRISIS TRIGGERED 🚨                             ║")
+	print("║ Epicenter: %s" % epicenter.institution_name.rpad(48) + "║")
+	print("║ Epicenter Stress: %.1f / Strength: %.1f" % [epicenter.stress, epicenter.strength] + "".rpad(20) + "║")
+	print("╚══════════════════════════════════════════════════════════════╝")
+	
+	# Print graph state BEFORE crisis effects
+	if dep_graph:
+		dep_graph.print_graph_weights("GRAPH BEFORE CRISIS", epicenter.institution_id)
+	
+	# Get crisis event from tree
+	var crisis_state = save_state.crisis_tree_state if save_state else {"current_node": "", "pruned_branches": []}
+	var current_node = crisis_state.get("current_node", "")
+	var pruned_branches = crisis_state.get("pruned_branches", [])
+	
+	var crisis_event = _get_crisis_event(current_node, pruned_branches)
+	if crisis_event.is_empty():
+		push_warning("[Crisis] No crisis event available")
+		_evaluate_crisis(epicenter)  # Fall back to simple evaluation
+		return
+	
+	# IMMEDIATELY affect global graph via dependency graph
+	print("[Crisis] Applying IMMEDIATE crisis effects to global graph")
+	print("[Crisis] Change originates from: %s" % epicenter.institution_id)
+	var base_effects = crisis_event.get("effects", {})
+	if not base_effects.is_empty() and dep_graph:
+		dep_graph.apply_crisis_effects(base_effects, inst_manager)
+	
+	# Propagate stress from epicenter through dependency graph
+	if dep_graph:
+		dep_graph.propagate_stress(epicenter, inst_manager)
+		# Print graph state AFTER crisis effects
+		dep_graph.print_graph_weights("GRAPH AFTER CRISIS EFFECTS", epicenter.institution_id)
+	
+	# Show EMERGENCY POPUP with choices
+	_show_emergency_crisis_popup(crisis_event, epicenter)
+
+## Get crisis event from region config tree
+func _get_crisis_event(current_node: String, pruned_branches: Array) -> Dictionary:
+	if not region_config:
+		return {}
+	
+	# If we have a current node, get it
+	if current_node != "":
+		var node = region_config.get_crisis_node(current_node)
+		if not node.is_empty() and current_node not in pruned_branches:
+			return node
+	
+	# Otherwise get root node
+	if region_config.crisis_tree.size() > 0:
+		var root = region_config.crisis_tree[0]
+		var root_id = root.get("node_id", "")
+		if root_id not in pruned_branches:
+			return root
+	
+	return {}
+
+## Show emergency crisis popup with randomized currency effects
+func _show_emergency_crisis_popup(crisis_event: Dictionary, epicenter: Institution) -> void:
+	# Build popup content
+	var title = crisis_event.get("title", "CRISIS!")
+	var description = crisis_event.get("description", "A crisis has erupted!")
+	var choices = crisis_event.get("choices", [])
+	
+	# Clear crisis overlay
+	for child in crisis_choices_container.get_children():
+		child.queue_free()
+	
+	# Set crisis info
+	crisis_description.text = "🚨 EMERGENCY: %s\n\nEpicenter: %s\n\n%s" % [
+		title, epicenter.institution_name, description
+	]
+	
+	# Show base effects that were already applied
+	var base_effects = crisis_event.get("effects", {})
+	if not base_effects.is_empty():
+		var effects_parts: Array = []
+		for key in base_effects:
+			effects_parts.append("%s: %+d" % [key.capitalize(), base_effects[key]])
+		crisis_effects.text = "Global Effects (APPLIED): " + ", ".join(effects_parts)
+	else:
+		crisis_effects.text = "The crisis is destabilizing institutions..."
+	
+	# Add choice buttons with RANDOMIZED currency effects
+	if choices.is_empty():
+		# No choices - auto-resolve
+		var close_btn = Button.new()
+		close_btn.text = "Acknowledge Crisis"
+		close_btn.pressed.connect(_on_crisis_acknowledged.bind(crisis_event, epicenter))
+		crisis_choices_container.add_child(close_btn)
+	else:
+		for i in range(choices.size()):
+			var choice = choices[i]
+			var choice_btn = Button.new()
+			
+			# Calculate randomized effects preview
+			var random_preview = _calculate_crisis_choice_preview(choice)
+			choice_btn.text = "%s\n%s" % [choice.get("text", "Option"), random_preview]
+			choice_btn.tooltip_text = _format_crisis_choice_tooltip(choice)
+			choice_btn.pressed.connect(_on_emergency_crisis_choice.bind(i, crisis_event, epicenter))
+			crisis_choices_container.add_child(choice_btn)
+	
+	# Show overlay
+	crisis_overlay.visible = true
+
+## Calculate randomized effects preview for crisis choice
+func _calculate_crisis_choice_preview(choice: Dictionary) -> String:
+	var effects = choice.get("effects", {})
+	var cost = choice.get("cost", {})
+	var parts: Array = []
+	
+	# Show costs
+	if cost is Dictionary:
+		if cost.get("cash", 0) > 0:
+			parts.append("Cost: $%d" % cost["cash"])
+		if cost.get("bandwidth", 0) > 0:
+			parts.append("BW: %d" % cost["bandwidth"])
+	
+	# Show RANDOMIZED effects range
+	for key in effects:
+		var base = effects[key]
+		var variance = abs(base) * 0.3  # 30% variance
+		var min_val = base - variance if base > 0 else base + variance
+		var max_val = base + variance if base > 0 else base - variance
+		parts.append("%s: %+.0f to %+.0f" % [key.capitalize(), min_val, max_val])
+	
+	return " | ".join(parts) if parts.size() > 0 else "(Unknown outcome)"
+
+## Format crisis choice tooltip with full details
+func _format_crisis_choice_tooltip(choice: Dictionary) -> String:
+	var lines: Array = []
+	lines.append("=== %s ===" % choice.get("text", "Choice"))
+	lines.append(choice.get("description", ""))
+	lines.append("")
+	
+	var requires = choice.get("requires", {})
+	if not requires.is_empty():
+		lines.append("Requirements:")
+		for key in requires:
+			lines.append("  %s: %.0f" % [key, requires[key]])
+		lines.append("")
+	
+	var cost = choice.get("cost", {})
+	if cost is Dictionary and not cost.is_empty():
+		lines.append("Cost:")
+		for key in cost:
+			lines.append("  %s: %.0f" % [key.capitalize(), cost[key]])
+		lines.append("")
+	
+	var effects = choice.get("effects", {})
+	if not effects.is_empty():
+		lines.append("Effects (with randomness ±30%):")
+		for key in effects:
+			lines.append("  %s: %+d" % [key.capitalize(), effects[key]])
+	
+	return "\n".join(lines)
+
+## Handle emergency crisis choice selection
+func _on_emergency_crisis_choice(choice_index: int, crisis_event: Dictionary, epicenter: Institution) -> void:
+	var choices = crisis_event.get("choices", [])
+	if choice_index < 0 or choice_index >= choices.size():
+		return
+	
+	var choice = choices[choice_index]
+	var node_id = crisis_event.get("node_id", "")
+	
+	print("")
+	print("╔══════════════════════════════════════════════════════════════╗")
+	print("║           CRISIS RESOLUTION                                  ║")
+	print("║ Player chose: %s" % choice.get("text", "?").rpad(44) + "║")
+	print("╚══════════════════════════════════════════════════════════════╝")
+	
+	# Check cost
+	var cost = choice.get("cost", {})
+	if cost is Dictionary:
+		if player_state.cash < cost.get("cash", 0) or player_state.bandwidth < cost.get("bandwidth", 0):
+			_log_console("Cannot afford crisis choice!")
+			return
+		# Spend cost
+		player_state.spend_cash(cost.get("cash", 0))
+		player_state.spend_bandwidth(cost.get("bandwidth", 0))
+	
+	# Apply RANDOMIZED effects
+	var effects = choice.get("effects", {})
+	_apply_randomized_crisis_effects(effects, epicenter)
+	
+	# Update crisis tree state - prune other branches
+	if save_state:
+		save_state.record_crisis_event(node_id, choice)
+		
+		# Prune branches not selected
+		for i in range(choices.size()):
+			if i != choice_index:
+				var other_choice = choices[i]
+				var other_next = other_choice.get("next_node", "")
+				if other_next != "" and save_state:
+					save_state.prune_crisis_branch(other_next)
+	
+	# Reset tension after crisis
+	tension_mgr.reset_after_crisis()
+	
+	# Rewire graph for resilience
+	if dep_graph:
+		dep_graph.rewire_for_resilience(inst_manager)
+		# Print final graph state after crisis resolution
+		dep_graph.print_graph_weights("GRAPH AFTER CRISIS RESOLUTION", epicenter.institution_id)
+	
+	# Close popup and update UI
+	crisis_overlay.visible = false
+	_update_dashboard()
+	_refresh_event_tree()
+	_log_console("Crisis resolved! Tension reset to %.1f" % tension_mgr.global_tension)
+
+## Apply randomized effects from crisis choice (±30% variance)
+func _apply_randomized_crisis_effects(effects: Dictionary, epicenter: Institution) -> void:
+	for key in effects:
+		var base_value = effects[key]
+		var variance = abs(base_value) * 0.3  # 30% variance
+		var random_value = base_value + randf_range(-variance, variance)
+		
+		match key:
+			"tension_change":
+				tension_mgr.add_tension(random_value)
+				print("[Crisis] Tension changed by %+.1f (base: %+d)" % [random_value, base_value])
+			"exposure_change":
+				player_state.increase_exposure(random_value)
+				print("[Crisis] Exposure changed by %+.1f (base: %+d)" % [random_value, base_value])
+			"all_influence_change":
+				for inst in inst_manager.get_all_institutions():
+					inst.increase_influence(random_value)
+				print("[Crisis] All influence changed by %+.1f (base: %+d)" % [random_value, base_value])
+			"govt_influence_change":
+				var govt = inst_manager.get_institution("govt_novara")
+				if govt:
+					govt.increase_influence(random_value)
+			"military_influence_change":
+				var mil = inst_manager.get_institution("military_novara")
+				if mil:
+					mil.increase_influence(random_value)
+			"all_stress_change":
+				for inst in inst_manager.get_all_institutions():
+					if random_value > 0:
+						inst.apply_stress(random_value)
+					else:
+						inst.reduce_stress(abs(random_value))
+				print("[Crisis] All stress changed by %+.1f (base: %+d)" % [random_value, base_value])
+			"all_capacity_change":
+				for inst in inst_manager.get_all_institutions():
+					inst.capacity = clamp(inst.capacity + random_value, 0, 100)
+					inst.capacity_changed.emit(inst.capacity)
+				print("[Crisis] All capacity changed by %+.1f (base: %+d)" % [random_value, base_value])
+			# Handle specific institution effects
+			var inst_key:
+				if inst_key.ends_with("_stress_change"):
+					var inst_id = inst_key.replace("_stress_change", "_novara")
+					var inst = inst_manager.get_institution(inst_id)
+					if inst:
+						if random_value > 0:
+							inst.apply_stress(random_value)
+						else:
+							inst.reduce_stress(abs(random_value))
+				elif inst_key.ends_with("_strength_change"):
+					var inst_id = inst_key.replace("_strength_change", "_novara")
+					var inst = inst_manager.get_institution(inst_id)
+					if inst:
+						inst.strength = clamp(inst.strength + random_value, 0, 100)
+						inst.strength_changed.emit(inst.strength)
+				elif inst_key.ends_with("_capacity_change"):
+					var inst_id = inst_key.replace("_capacity_change", "_novara")
+					var inst = inst_manager.get_institution(inst_id)
+					if inst:
+						inst.capacity = clamp(inst.capacity + random_value, 0, 100)
+						inst.capacity_changed.emit(inst.capacity)
+
+## Handle crisis acknowledged (no choices)
+func _on_crisis_acknowledged(crisis_event: Dictionary, epicenter: Institution) -> void:
+	# Reset tension
+	tension_mgr.reset_after_crisis()
+	
+	# Rewire graph
+	if dep_graph:
+		dep_graph.rewire_for_resilience(inst_manager)
+	
+	# Close popup
+	crisis_overlay.visible = false
+	_update_dashboard()
+	_refresh_event_tree()
+	_log_console("Crisis acknowledged. Tension reset.")
 
 ## DEBUG: Add cash
 func _on_debug_add_cash() -> void:
@@ -715,39 +1635,6 @@ func _on_debug_add_bandwidth() -> void:
 	player_state.gain_bandwidth(25.0)
 	_log_console("Added 25 bandwidth (total: %.0f)" % player_state.bandwidth)
 	_update_dashboard()
-
-## DEBUG: Add influence to random institution
-func _on_debug_add_influence() -> void:
-	var insts = inst_manager.get_all_institutions()
-	if insts.is_empty():
-		return
-	
-	var target = insts[randi() % insts.size()]
-	target.increase_influence(15.0)
-	_log_console("Added 15 influence to %s (influence: %.0f)" % [target.institution_name, target.player_influence])
-
-## DEBUG: Test event effects
-func _on_debug_test_event() -> void:
-	var insts = inst_manager.get_all_institutions()
-	if insts.is_empty():
-		return
-	
-	var target = insts[randi() % insts.size()]
-	
-	# Create a test event with choices
-	var test_event = {
-		"title": "Test Event: Opportunity",
-		"description": "A test opportunity has appeared at %s. How do you respond?" % target.institution_name,
-		"auto_effects": {"tension_change": 5.0},
-		"player_choices": [
-			{"label": "Invest Resources", "cost": {"cash": 100.0}, "effects": {"influence_change": 10.0}},
-			{"label": "Gather Intel", "cost": {"bandwidth": 10.0}, "effects": {"stress_change": -5.0}},
-			{"label": "Do Nothing", "cost": {}, "effects": {}}
-		]
-	}
-	
-	show_event_dialog(test_event, target, test_event["player_choices"])
-	_log_console("Test event triggered on %s" % target.institution_name)
 
 ## Update dashboard labels
 func _update_dashboard() -> void:
@@ -763,3 +1650,12 @@ func _update_dashboard() -> void:
 	bandwidth_label.text = "Bandwidth: %.0f/%.0f" % [player_state.bandwidth, player_state.max_bandwidth]
 	exposure_label.text = "Exposure: %.0f%%" % (player_state.exposure)
 	tension_bar.value = tension_mgr.global_tension / tension_mgr.crisis_threshold * 100.0
+	
+	# Update relevance
+	if relevance_label:
+		var insts = inst_manager.get_all_institutions()
+		var relevance = player_state.calculate_relevance(insts)
+		relevance_label.text = "Relevance: %.1f%%" % relevance
+	
+	# Update queue button counts
+	_update_queue_buttons()
