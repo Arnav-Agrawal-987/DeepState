@@ -18,6 +18,7 @@ var bandwidth: float = 50.0
 var max_bandwidth: float = MAX_BANDWIDTH
 
 var exposure: float = 0.0
+var max_exposure: float = MAX_EXPOSURE
 var exposure_decay: float = EXPOSURE_DECAY_RATE
 
 func _ready() -> void:

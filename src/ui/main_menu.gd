@@ -4,7 +4,7 @@ extends Control
 
 class_name MainMenu
 
-@onready var continue_button = $CenterContainer/VBoxContainer/ButtonContainer/ContinueButton
+@onready var continue_button = $MenuUi/MenuControl/ContinueButton
 
 func _ready() -> void:
 	# Check if save exists

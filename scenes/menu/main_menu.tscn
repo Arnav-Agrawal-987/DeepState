@@ -1,6 +1,77 @@
-[gd_scene load_steps=2 format=3 uid="uid://cx0y0h95oy5e"]
+[gd_scene load_steps=20 format=3 uid="uid://cx0y0ia5oy5e"]
 
-[ext_resource type="Script" path="res://src/ui/main_menu.gd" id="1_6hk8p"]
+[ext_resource type="Script" uid="uid://tlsjorregakk" path="res://src/ui/main_menu.gd" id="1_6hk8p"]
+[ext_resource type="Texture2D" uid="uid://y7ftiy6lct2j" path="res://assets/sprites/bg.png" id="2_3rkf3"]
+[ext_resource type="FontFile" uid="uid://l3lmhl8iqgx4" path="res://assets/fonts/Top Secret.ttf" id="3_hj162"]
+[ext_resource type="FontFile" uid="uid://f0itya1qaday" path="res://assets/fonts/Tektur-VariableFont_wdth,wght.ttf" id="4_xn6kt"]
+[ext_resource type="Texture2D" uid="uid://c1d0nlnaffni2" path="res://assets/sprites/button.png" id="5_isoef"]
+[ext_resource type="FontFile" uid="uid://b1wr46em0yl2k" path="res://assets/fonts/STENCIL.TTF" id="5_qgo02"]
+[ext_resource type="Texture2D" uid="uid://1612dix6f28d" path="res://assets/sprites/button_pressed.png" id="7_vovv2"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_qgo02"]
+content_margin_top = 12.0
+texture = ExtResource("5_isoef")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_1k4da"]
+content_margin_top = 20.0
+texture = ExtResource("7_vovv2")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_bbqo6"]
+content_margin_top = 10.0
+texture = ExtResource("5_isoef")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_d4hu8"]
+texture = ExtResource("5_isoef")
+draw_center = false
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vovv2"]
+content_margin_top = 15.0
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1k4da"]
+content_margin_top = 20.0
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_bbqo6"]
+content_margin_top = 10.0
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_qgo02"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_isoef"]
+content_margin_right = 24.0
+
+[sub_resource type="Animation" id="Animation_qgo02"]
+length = 0.001
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MenuControl:modulate:a")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(1, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0)
+}
+
+[sub_resource type="Animation" id="Animation_isoef"]
+resource_name = "fade_out"
+length = 0.5
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MenuControl:modulate:a")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0, 2),
+"points": PackedFloat32Array(1, -0.25, 0, 0.25, 0, 0, -0.083333336, 0.16666667, 0, 0),
+"times": PackedFloat32Array(0, 0.5)
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_qgo02"]
+_data = {
+&"RESET": SubResource("Animation_qgo02"),
+&"fade_out": SubResource("Animation_isoef")
+}
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -11,85 +82,196 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_6hk8p")
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Background" type="TextureRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(0.08, 0.08, 0.12, 1)
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_3rkf3")
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
+[node name="MenuUi" type="CanvasLayer" parent="."]
+
+[node name="MenuControl" type="Control" parent="MenuUi"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="TitleLabel" type="Label" parent="MenuUi/MenuControl"]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-
-[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer"]
-layout_mode = 2
-theme_override_constants/separation = 20
-
-[node name="TitleLabel" type="Label" parent="CenterContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 48
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.363
+anchor_right = 0.5
+anchor_bottom = 0.363
+offset_left = 748.0
+offset_top = 568.48
+offset_right = 3052.0
+offset_bottom = 970.48
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_fonts/font = ExtResource("3_hj162")
+theme_override_font_sizes/font_size = 375
 text = "DEEP STATE"
 horizontal_alignment = 1
 
-[node name="SubtitleLabel" type="Label" parent="CenterContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.6, 0.6, 0.7, 1)
-text = "Systemic Strategy Game"
+[node name="SubtitleLabel" type="Label" parent="MenuUi/MenuControl"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 756.0
+offset_top = 1014.5
+offset_right = 3044.0
+offset_bottom = 1105.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("4_xn6kt")
+theme_override_font_sizes/font_size = 70
+text = "Power is what happens when nobody notices who made it possible"
 horizontal_alignment = 1
 
-[node name="Spacer" type="Control" parent="CenterContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 30)
-layout_mode = 2
-
-[node name="ButtonContainer" type="VBoxContainer" parent="CenterContainer/VBoxContainer"]
-custom_minimum_size = Vector2(280, 0)
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="PlayButton" type="Button" parent="CenterContainer/VBoxContainer/ButtonContainer"]
-custom_minimum_size = Vector2(0, 45)
-layout_mode = 2
+[node name="PlayButton" type="Button" parent="MenuUi/MenuControl"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.41400003
+anchor_top = 0.61
+anchor_right = 0.41400003
+anchor_bottom = 0.61
+offset_left = 1289.44
+offset_top = 1175.6
+offset_right = 1853.44
+offset_bottom = 1414.1
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0.13610044, 0.13610047, 0.13610092, 1)
+theme_override_fonts/font = ExtResource("5_qgo02")
+theme_override_font_sizes/font_size = 84
+theme_override_styles/normal = SubResource("StyleBoxTexture_qgo02")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_1k4da")
+theme_override_styles/hover = SubResource("StyleBoxTexture_bbqo6")
+theme_override_styles/focus = SubResource("StyleBoxTexture_d4hu8")
 text = "New Game"
 
-[node name="ContinueButton" type="Button" parent="CenterContainer/VBoxContainer/ButtonContainer"]
+[node name="ContinueButton" type="Button" parent="MenuUi/MenuControl"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.586
+anchor_top = 0.611
+anchor_right = 0.586
+anchor_bottom = 0.611
+offset_left = 1946.56
+offset_top = 1175.56
+offset_right = 2510.56
+offset_bottom = 1414.06
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_colors/font_focus_color = Color(0, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0.13610044, 0.13610047, 0.13610092, 1)
+theme_override_fonts/font = ExtResource("5_qgo02")
+theme_override_font_sizes/font_size = 84
+theme_override_styles/normal = SubResource("StyleBoxTexture_qgo02")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_1k4da")
+theme_override_styles/hover = SubResource("StyleBoxTexture_bbqo6")
+theme_override_styles/focus = SubResource("StyleBoxTexture_d4hu8")
+text = "Continue
+"
+
+[node name="ContinueButton1" type="Button" parent="MenuUi/MenuControl"]
+visible = false
 custom_minimum_size = Vector2(0, 45)
-layout_mode = 2
+layout_mode = 0
+offset_left = 1780.0
+offset_top = 1029.0
+offset_right = 2060.0
+offset_bottom = 1074.0
 text = "Continue"
 
-[node name="EventTreeButton" type="Button" parent="CenterContainer/VBoxContainer/ButtonContainer"]
+[node name="EventTreeButton" type="Button" parent="MenuUi/MenuControl"]
+visible = false
 custom_minimum_size = Vector2(0, 45)
-layout_mode = 2
+layout_mode = 0
+offset_left = 1780.0
+offset_top = 1143.0
+offset_right = 4084.0
+offset_bottom = 1188.0
 text = "Event Tree Viewer"
 
-[node name="OptionsButton" type="Button" parent="CenterContainer/VBoxContainer/ButtonContainer"]
+[node name="OptionsButton" type="Button" parent="MenuUi/MenuControl"]
+visible = false
 custom_minimum_size = Vector2(0, 45)
-layout_mode = 2
+layout_mode = 0
+offset_left = 1780.0
+offset_top = 1143.0
+offset_right = 4084.0
+offset_bottom = 1188.0
 text = "Options"
 
-[node name="QuitButton" type="Button" parent="CenterContainer/VBoxContainer/ButtonContainer"]
+[node name="QuitButton" type="Button" parent="MenuUi/MenuControl"]
 custom_minimum_size = Vector2(0, 45)
-layout_mode = 2
+layout_mode = 0
+offset_left = 1780.0
+offset_top = 1500.0
+offset_right = 2060.0
+offset_bottom = 1580.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_focus_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(0.80049026, 0.8004911, 0.8004902, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0)
+theme_override_colors/icon_normal_color = Color(1, 1, 1, 0)
+theme_override_colors/icon_focus_color = Color(1, 1, 1, 0)
+theme_override_colors/icon_pressed_color = Color(1, 1, 1, 0)
+theme_override_colors/icon_hover_color = Color(1, 1, 1, 0)
+theme_override_colors/icon_hover_pressed_color = Color(1, 1, 1, 0)
+theme_override_colors/icon_disabled_color = Color(1, 1, 1, 0)
+theme_override_fonts/font = ExtResource("5_qgo02")
+theme_override_font_sizes/font_size = 64
+theme_override_styles/normal = SubResource("StyleBoxEmpty_vovv2")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_1k4da")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_bbqo6")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_qgo02")
 text = "Quit"
 
-[node name="VersionLabel" type="Label" parent="."]
+[node name="VersionLabel" type="Label" parent="MenuUi/MenuControl"]
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -100.0
-offset_top = -30.0
+offset_left = 3641.0
+offset_top = 2057.0
+offset_right = 3800.0
+offset_bottom = 2120.0
 grow_horizontal = 0
 grow_vertical = 0
 theme_override_colors/font_color = Color(0.4, 0.4, 0.5, 1)
+theme_override_fonts/font = ExtResource("4_xn6kt")
+theme_override_font_sizes/font_size = 48
+theme_override_styles/normal = SubResource("StyleBoxEmpty_isoef")
 text = "v0.1.0"
+horizontal_alignment = 1
+vertical_alignment = 1
 
-[connection signal="pressed" from="CenterContainer/VBoxContainer/ButtonContainer/PlayButton" to="." method="_on_play_pressed"]
-[connection signal="pressed" from="CenterContainer/VBoxContainer/ButtonContainer/ContinueButton" to="." method="_on_continue_pressed"]
-[connection signal="pressed" from="CenterContainer/VBoxContainer/ButtonContainer/EventTreeButton" to="." method="_on_event_tree_pressed"]
-[connection signal="pressed" from="CenterContainer/VBoxContainer/ButtonContainer/OptionsButton" to="." method="_on_options_pressed"]
-[connection signal="pressed" from="CenterContainer/VBoxContainer/ButtonContainer/QuitButton" to="." method="_on_quit_pressed"]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="MenuUi/MenuControl"]
+root_node = NodePath("../..")
+libraries = {
+&"": SubResource("AnimationLibrary_qgo02")
+}
+
+[connection signal="pressed" from="MenuUi/MenuControl/PlayButton" to="." method="_on_play_pressed"]
+[connection signal="pressed" from="MenuUi/MenuControl/ContinueButton" to="." method="_on_continue_pressed"]
+[connection signal="pressed" from="MenuUi/MenuControl/EventTreeButton" to="." method="_on_event_tree_pressed"]
+[connection signal="pressed" from="MenuUi/MenuControl/OptionsButton" to="." method="_on_options_pressed"]
+[connection signal="pressed" from="MenuUi/MenuControl/QuitButton" to="." method="_on_quit_pressed"]

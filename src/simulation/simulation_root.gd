@@ -27,12 +27,12 @@ class_name SimulationRoot
 @onready var crisis_choices_container = $SimulationUI/CrisisOverlay/CenterContainer/CrisisPanel/MarginContainer/VBoxContainer/CrisisChoicesContainer
 
 @onready var pause_menu = $SimulationUI/PauseMenu
-@onready var console_label = $SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ConsoleLabel
+@onready var console_label = $SimulationUI/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ConsoleLabel
 
-@onready var event_tree = $SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/EventTreePanel/EventTreeScroll/EventTree
-@onready var institution_select = $SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/TreeTypeHBox/InstitutionSelect
-@onready var tree_type_select = $SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/TreeTypeHBox/TreeTypeSelect
-@onready var menu_button = $SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer/MenuButton
+@onready var event_tree = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/EventTreePanel/EventTreeScroll/EventTree
+@onready var institution_select = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/TreeTypeHBox/InstitutionSelect
+@onready var tree_type_select = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/TreeTypeHBox/TreeTypeSelect
+@onready var menu_button = $SimulationUI/MainLayout/MenuButton
 
 var region_config: RegionConfig
 var save_state: RegionSaveState
@@ -343,7 +343,7 @@ func _create_fallback_test_region() -> void:
 
 ## Setup UI and populate institution cards
 func _setup_ui() -> void:
-	var institution_panel = $SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/LeftPanel/InstitutionPanel/ScrollContainer/VBoxContainer
+	var institution_panel = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/LeftPanel/InstitutionPanel/ScrollContainer/VBoxContainer
 	var institution_card_scene = preload("res://scenes/simulation/institution_card.tscn")
 	
 	for inst in inst_manager.get_all_institutions():
@@ -493,10 +493,10 @@ func _connect_menu_buttons() -> void:
 		menu_button.pressed.connect(_on_menu_pressed)
 	
 	# Pause menu buttons
-	var resume_btn = $SimulationUI/PauseMenu/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ResumeBtn
-	var save_btn = $SimulationUI/PauseMenu/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/SaveBtn
-	var main_menu_btn = $SimulationUI/PauseMenu/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/MainMenuBtn
-	var quit_btn = $SimulationUI/PauseMenu/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/QuitBtn
+	var resume_btn = $SimulationUI/PauseMenu/MenuOptionControl/ResumeButton
+	var save_btn = $SimulationUI/PauseMenu/MenuOptionControl/SaveButton
+	var main_menu_btn = $SimulationUI/PauseMenu/MenuOptionControl/MainMenuButton
+	var quit_btn = $SimulationUI/PauseMenu/MenuOptionControl/QuitButton
 	
 	if resume_btn:
 		resume_btn.pressed.connect(_on_resume_pressed)
@@ -619,8 +619,8 @@ func _log_console(msg: String) -> void:
 
 ## Connect debug buttons
 func _connect_debug_buttons() -> void:
-	var button_row1 = $SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ButtonRow1
-	var button_row2 = $SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ButtonRow2
+	var button_row1 = $SimulationUI/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ButtonRow1
+	var button_row2 = $SimulationUI/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ButtonRow2
 
 	var buttons_row1 := {
 		"AdvanceDayBtn": _on_debug_advance_day,
@@ -751,15 +751,15 @@ func _on_debug_test_event() -> void:
 
 ## Update dashboard labels
 func _update_dashboard() -> void:
-	var dashboard = $SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer
-	var day_label = dashboard.get_node("HBoxContainer/Label")
-	var cash_label = dashboard.get_node("HBoxContainer/CashLabel")
-	var bandwidth_label = dashboard.get_node("HBoxContainer/BandwidthLabel")
-	var exposure_label = dashboard.get_node("HBoxContainer/ExposureLabel")
-	var tension_bar = dashboard.get_node("TensionHBox/TensionBar")
+	var dashboard = $SimulationUI/MainLayout
+	var day_label = dashboard.get_node("DayLabel")
+	var cash_label = dashboard.get_node("CashLabel")
+	var bandwidth_bar = dashboard.get_node("BandwidthProgress")
+	var exposure_bar = dashboard.get_node("ExposureProgress")
+	var tension_bar = dashboard.get_node("TensionBar")
 	
-	day_label.text = "Day: %d" % clock.current_day
-	cash_label.text = "Cash: $%.0f" % player_state.cash
-	bandwidth_label.text = "Bandwidth: %.0f/%.0f" % [player_state.bandwidth, player_state.max_bandwidth]
-	exposure_label.text = "Exposure: %.0f%%" % (player_state.exposure)
+	day_label.text = "Day %d" % clock.current_day
+	cash_label.text = "Cash:              $%.0f" % player_state.cash
+	bandwidth_bar.value = player_state.bandwidth / player_state.max_bandwidth * 100.0
+	exposure_bar.value = player_state.exposure / player_state.max_exposure * 100.0
 	tension_bar.value = tension_mgr.global_tension / tension_mgr.crisis_threshold * 100.0
