@@ -35,9 +35,9 @@ class_name SimulationRoot
 @onready var menu_button = $SimulationUI/MainLayout/MenuButton
 
 # NEW: Event Queue and Crisis View UI
-@onready var view_crisis_btn = $SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer/ViewCrisisBtn
-@onready var event_queue_btn = $SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer/EventQueueBtn
-@onready var relevance_label = $SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer/RelevanceLabel
+@onready var view_crisis_btn = $SimulationUI/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer/ViewCrisisBtn
+@onready var event_queue_btn = $SimulationUI/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer/EventQueueBtn
+@onready var relevance_label = $SimulationUI/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer/RelevanceLabel
 
 @onready var event_queue_overlay = $SimulationUI/EventQueueOverlay
 @onready var event_queue_list = $SimulationUI/EventQueueOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/QueueScroll/QueueList
@@ -49,9 +49,9 @@ class_name SimulationRoot
 @onready var close_crisis_btn = $SimulationUI/CrisisViewOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/CloseCrisisBtn
 
 # NEW: Default Actions UI
-@onready var default_actions_panel = $SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel
-@onready var action_inst_select = $SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel/ActionsVBox/ActionInstSelect
-@onready var actions_container = $SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel/ActionsVBox/ActionsContainer
+@onready var default_actions_panel = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel
+@onready var action_inst_select = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel/ActionsVBox/ActionInstSelect
+@onready var actions_container = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel/ActionsVBox/ActionsContainer
 
 var region_config: RegionConfig
 var save_state: RegionSaveState

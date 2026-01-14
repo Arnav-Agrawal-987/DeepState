@@ -81,6 +81,7 @@ grow_vertical = 2
 texture = ExtResource("2_n0cld")
 
 [node name="MainLayout" type="Control" parent="SimulationUI"]
+visible = false
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -242,7 +243,6 @@ theme_override_styles/focus = SubResource("StyleBoxTexture_hnkx7")
 expand_icon = true
 
 [node name="MarginContainer" type="MarginContainer" parent="SimulationUI"]
-visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -258,71 +258,7 @@ layout_mode = 2
 theme_override_constants/separation = 8
 
 [node name="ContentHSplit" type="HSplitContainer" parent="SimulationUI/MarginContainer/MainVBox"]
-[node name="PlayerDashboard" type="PanelContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox"]
 layout_mode = 2
-
-[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard"]
-layout_mode = 2
-theme_override_constants/separation = 5
-
-[node name="HBoxContainer" type="HBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 30
-
-[node name="Label" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 18
-text = "Day: 1"
-
-[node name="CashLabel" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-text = "Cash: $1000"
-
-[node name="BandwidthLabel" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-text = "Bandwidth: 50/100"
-
-[node name="ExposureLabel" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-text = "Exposure: 0%"
-
-[node name="RelevanceLabel" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-text = "Relevance: 0%"
-
-[node name="Spacer" type="Control" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="ViewCrisisBtn" type="Button" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-text = "View Crisis (0)"
-
-[node name="EventQueueBtn" type="Button" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-text = "Event Queue (0)"
-
-[node name="MenuButton" type="Button" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
-layout_mode = 2
-text = "Menu"
-
-[node name="TensionHBox" type="HBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer"]
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="TensionLabel" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/TensionHBox"]
-layout_mode = 2
-text = "Tension:"
-
-[node name="TensionBar" type="ProgressBar" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/TensionHBox"]
-custom_minimum_size = Vector2(200, 0)
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="ContentHSplit" type="HSplitContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox"]
-layout_mode = 2
-size_flags_vertical = 3
-split_offset = -350
 
 [node name="LeftPanel" type="VBoxContainer" parent="SimulationUI/MarginContainer/MainVBox/ContentHSplit"]
 layout_mode = 2
@@ -369,25 +305,24 @@ size_flags_horizontal = 3
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="EventTreePanel" type="PanelContainer" parent="SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel"]
-[node name="DefaultActionsPanel" type="PanelContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel"]
+[node name="DefaultActionsPanel" type="PanelContainer" parent="SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel"]
 layout_mode = 2
 
-[node name="ActionsVBox" type="VBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel"]
+[node name="ActionsVBox" type="VBoxContainer" parent="SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel"]
 layout_mode = 2
 
-[node name="ActionsLabel" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel/ActionsVBox"]
+[node name="ActionsLabel" type="Label" parent="SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel/ActionsVBox"]
 layout_mode = 2
 text = "Default Actions"
 
-[node name="ActionInstSelect" type="OptionButton" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel/ActionsVBox"]
+[node name="ActionInstSelect" type="OptionButton" parent="SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel/ActionsVBox"]
 layout_mode = 2
 
-[node name="ActionsContainer" type="VBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel/ActionsVBox"]
+[node name="ActionsContainer" type="VBoxContainer" parent="SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel/ActionsVBox"]
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="EventTreePanel" type="PanelContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/ContentHSplit/RightPanel"]
+[node name="EventTreePanel" type="PanelContainer" parent="SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel"]
 layout_mode = 2
 size_flags_vertical = 3
 
@@ -401,6 +336,29 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 hide_root = true
+
+[node name="PlayerDashboard" type="PanelContainer" parent="SimulationUI/MarginContainer/MainVBox"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/MarginContainer/MainVBox/PlayerDashboard"]
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="HBoxContainer" type="HBoxContainer" parent="SimulationUI/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="RelevanceLabel" type="Label" parent="SimulationUI/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "Relevance: 0%"
+
+[node name="ViewCrisisBtn" type="Button" parent="SimulationUI/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "View Crisis (0)"
+
+[node name="EventQueueBtn" type="Button" parent="SimulationUI/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer"]
+layout_mode = 2
+text = "Event Queue (0)"
 
 [node name="DebugPanel" type="PanelContainer" parent="SimulationUI/MarginContainer/MainVBox"]
 layout_mode = 2
@@ -442,7 +400,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "Add Tension"
 
-[node name="ButtonRow2" type="HBoxContainer" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer"]
+[node name="ButtonRow2" type="HBoxContainer" parent="SimulationUI/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
@@ -458,7 +416,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "Add Bandwidth"
 
-[node name="ConsoleLabel" type="Label" parent="SimulationUI/MainLayout/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer"]
+[node name="ConsoleLabel" type="Label" parent="SimulationUI/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.8, 0.6, 1)
 text = "Ready"
@@ -751,3 +709,130 @@ theme_override_styles/pressed = SubResource("StyleBoxTexture_doqu2")
 theme_override_styles/hover = SubResource("StyleBoxTexture_ibayl")
 theme_override_styles/focus = SubResource("StyleBoxTexture_jbe1t")
 text = "Quit"
+
+[node name="EventQueueOverlay" type="Control" parent="SimulationUI"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DimBackground" type="ColorRect" parent="SimulationUI/EventQueueOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0.1, 0.7)
+
+[node name="CenterContainer" type="CenterContainer" parent="SimulationUI/EventQueueOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="SimulationUI/EventQueueOverlay/CenterContainer"]
+custom_minimum_size = Vector2(600, 400)
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="SimulationUI/EventQueueOverlay/CenterContainer/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/EventQueueOverlay/CenterContainer/PanelContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="QueueTitle" type="Label" parent="SimulationUI/EventQueueOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "📋 Event Queue"
+horizontal_alignment = 1
+
+[node name="QueueScroll" type="ScrollContainer" parent="SimulationUI/EventQueueOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="QueueList" type="VBoxContainer" parent="SimulationUI/EventQueueOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/QueueScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="CloseQueueBtn" type="Button" parent="SimulationUI/EventQueueOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Close"
+
+[node name="CrisisViewOverlay" type="Control" parent="SimulationUI"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DimBackground" type="ColorRect" parent="SimulationUI/CrisisViewOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.2, 0, 0, 0.8)
+
+[node name="CenterContainer" type="CenterContainer" parent="SimulationUI/CrisisViewOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="SimulationUI/CrisisViewOverlay/CenterContainer"]
+custom_minimum_size = Vector2(650, 450)
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="SimulationUI/CrisisViewOverlay/CenterContainer/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 25
+theme_override_constants/margin_top = 25
+theme_override_constants/margin_right = 25
+theme_override_constants/margin_bottom = 25
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SimulationUI/CrisisViewOverlay/CenterContainer/PanelContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="CrisisViewTitle" type="Label" parent="SimulationUI/CrisisViewOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.3, 0.3, 1)
+theme_override_font_sizes/font_size = 24
+text = "⚠ ACTIVE CRISES ⚠"
+horizontal_alignment = 1
+
+[node name="RelevanceLabel" type="Label" parent="SimulationUI/CrisisViewOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8, 0.3, 1)
+text = "Your Relevance: 0%"
+horizontal_alignment = 1
+
+[node name="CrisisScroll" type="ScrollContainer" parent="SimulationUI/CrisisViewOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="CrisisList" type="VBoxContainer" parent="SimulationUI/CrisisViewOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/CrisisScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 15
+
+[node name="CloseCrisisBtn" type="Button" parent="SimulationUI/CrisisViewOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Close"
