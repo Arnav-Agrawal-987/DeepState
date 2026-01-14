@@ -1,77 +1,167 @@
-[gd_resource type="Resource" script_class="InstitutionConfig" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="InstitutionConfig" load_steps=2 format=3 uid="uid://dj5kp7nwq3lmr"]
 
-[ext_resource type="Script" path="res://src/data/institution_config.gd" id="1"]
+[ext_resource type="Script" path="res://src/data/institution_config.gd" id="1_media"]
 
 [resource]
-script = ExtResource("1")
-institution_id = "media"
-institution_name = "National Broadcasting Network"
+script = ExtResource("1_media")
+institution_id = "media_novara"
+institution_name = "State Media of Novara"
 institution_type = 1
-initial_capacity = 45.0
-initial_strength = 75.0
-initial_stress = 15.0
-initial_influence = 0.0
-player_event_tree = [{
-"node_id": "action_light",
-"title": "Plant Stories",
-"description": "Feed favorable narratives to sympathetic journalists.",
-"conditions": {"min_influence": 10.0, "max_stress": 95.0},
-"cost": {"cash": 200.0, "bandwidth": 8.0},
-"effects": {"stress_change": 12.0, "influence_change": 4.0, "exposure_change": 1.0, "tension_change": 2.0}
-}, {
-"node_id": "action_moderate",
-"title": "Control Editors",
-"description": "Influence editorial decisions at major outlets.",
-"conditions": {"min_influence": 25.0, "max_stress": 85.0},
-"cost": {"cash": 450.0, "bandwidth": 18.0},
-"effects": {"stress_change": 20.0, "influence_change": 8.0, "exposure_change": 4.0, "tension_change": 4.0}
-}, {
-"node_id": "action_heavy",
-"title": "Manufacture Crises",
-"description": "Create news events to distract from real issues.",
-"conditions": {"min_influence": 55.0},
-"cost": {"cash": 900.0, "bandwidth": 32.0},
-"effects": {"stress_change": 32.0, "influence_change": 12.0, "capacity_change": -8.0, "exposure_change": 10.0, "tension_change": 8.0}
-}, {
-"node_id": "action_deep",
-"title": "Narrative Control",
-"description": "Establish total control over information flow.",
-"conditions": {"min_influence": 75.0},
-"cost": {"cash": 2000.0, "bandwidth": 50.0},
-"effects": {"stress_change": 45.0, "influence_change": 20.0, "capacity_change": -15.0, "exposure_change": -5.0, "tension_change": 12.0}
-}]
-autonomous_event_tree = [{
-"node_id": "stress_whistleblower",
-"trigger_type": "stress",
-"title": "Whistleblower Exposé",
-"description": "Journalists are about to publish a major exposé on government corruption.",
-"conditions": {"min_stress": 70.0},
-"auto_effects": {"stress_change": -15.0, "tension_change": 14.0},
-"player_choices": [{"text": "Kill the story", "requires": {"min_influence": 45.0}, "cost": {"cash": 500.0, "bandwidth": 20.0}, "effects": {"influence_change": 10.0, "exposure_change": 8.0, "tension_change": -5.0}}, {"text": "Redirect story target", "requires": {"min_influence": 55.0}, "cost": {"cash": 700.0, "bandwidth": 25.0}, "effects": {"influence_change": 15.0, "stress_change": 10.0, "exposure_change": 12.0}}, {"text": "Let it run", "effects": {"tension_change": 8.0}}]
-}, {
-"node_id": "stress_censorship",
-"trigger_type": "stress",
-"title": "Censorship Controversy",
-"description": "Accusations of government censorship are damaging media credibility.",
-"conditions": {"min_stress": 80.0},
-"auto_effects": {"stress_change": -18.0, "capacity_change": -5.0, "tension_change": 10.0},
-"player_choices": [{"text": "Amplify controversy", "requires": {"min_influence": 40.0}, "cost": {"cash": 300.0}, "effects": {"stress_change": 15.0, "influence_change": 8.0, "exposure_change": 6.0}}, {"text": "Observe", "effects": {}}]
-}, {
-"node_id": "stable_independence",
-"trigger_type": "stable",
-"title": "Media Independence Push",
-"description": "Advocacy groups push for stronger press freedom laws.",
-"conditions": {"max_stress": 40.0},
-"probability": 0.28,
-"auto_effects": {"capacity_change": 5.0, "strength_change": 4.0},
-"player_choices": [{"text": "Oppose independence", "requires": {"min_influence": 50.0}, "cost": {"cash": 600.0, "bandwidth": 22.0}, "effects": {"stress_change": 25.0, "capacity_change": -8.0, "exposure_change": 10.0}}, {"text": "Support independence", "effects": {"influence_change": -8.0}}]
-}, {
-"node_id": "stable_merger",
-"trigger_type": "stable",
-"title": "Media Consolidation",
-"description": "Major outlets are considering a merger.",
-"conditions": {"max_stress": 35.0, "min_capacity": 40.0},
-"probability": 0.18,
-"auto_effects": {"capacity_change": 3.0},
-"player_choices": [{"text": "Facilitate merger", "requires": {"min_influence": 35.0}, "cost": {"cash": 800.0}, "effects": {"influence_change": 12.0, "exposure_change": 5.0}}, {"text": "Block merger", "requires": {"min_influence": 45.0}, "cost": {"cash": 500.0, "bandwidth": 18.0}, "effects": {"stress_change": 18.0, "exposure_change": 8.0}}]
-}]
+initial_capacity = 55.0
+initial_strength = 70.0
+initial_stress = 20.0
+initial_influence = 40.0
+
+stress_triggered_tree = [
+	{
+		"node_id": "media_stress_root",
+		"title": "Credibility Crisis",
+		"description": "Public trust in state media has plummeted. Protests demand independent journalism.",
+		"conditions": {},
+		"effects": {"influence": -15},
+		"choices": [
+			{
+				"text": "Double Down on Propaganda",
+				"next_node": "propaganda_1",
+				"prunes_branches": ["reform_1", "reform_2"],
+				"effects": {"stress": -5},
+				"cost": 10,
+				"requires": {}
+			},
+			{
+				"text": "Promise Media Reforms",
+				"next_node": "reform_1",
+				"prunes_branches": ["propaganda_1", "propaganda_2"],
+				"effects": {"stress": -15, "capacity": -5},
+				"cost": 5,
+				"requires": {}
+			}
+		]
+	},
+	{
+		"node_id": "propaganda_1",
+		"title": "Information Warfare",
+		"description": "New narratives are crafted. Counter-messaging floods all channels.",
+		"conditions": {},
+		"effects": {"influence": 10},
+		"choices": [
+			{
+				"text": "Target Opposition Leaders",
+				"next_node": "propaganda_2",
+				"prunes_branches": [],
+				"effects": {"stress": -20, "influence": 15},
+				"cost": 25,
+				"requires": {}
+			},
+			{
+				"text": "Focus on National Unity",
+				"next_node": "propaganda_2",
+				"prunes_branches": [],
+				"effects": {"stress": -15, "capacity": 5},
+				"cost": 15,
+				"requires": {}
+			}
+		]
+	},
+	{
+		"node_id": "propaganda_2",
+		"title": "Narrative Controlled",
+		"description": "The message has been shaped. Public opinion shifts back.",
+		"conditions": {},
+		"effects": {"stress": -25, "influence": 10},
+		"choices": []
+	},
+	{
+		"node_id": "reform_1",
+		"title": "Editorial Independence",
+		"description": "Journalists are given more freedom. Some stories become uncomfortable.",
+		"conditions": {},
+		"effects": {"capacity": 10},
+		"choices": [
+			{
+				"text": "Allow Critical Reporting",
+				"next_node": "reform_2",
+				"prunes_branches": [],
+				"effects": {"stress": -30, "influence": -10},
+				"cost": 0,
+				"requires": {}
+			},
+			{
+				"text": "Set Boundaries",
+				"next_node": "reform_2",
+				"prunes_branches": [],
+				"effects": {"stress": -20, "capacity": 5},
+				"cost": 10,
+				"requires": {}
+			}
+		]
+	},
+	{
+		"node_id": "reform_2",
+		"title": "New Era of Media",
+		"description": "The reforms take hold. A new balance is struck.",
+		"conditions": {},
+		"effects": {"stress": -20, "capacity": 10},
+		"choices": []
+	}
+]
+
+randomly_triggered_tree = [
+	{
+		"node_id": "media_random_root",
+		"title": "Breaking Story",
+		"description": "Journalists have uncovered a major story. How should it be handled?",
+		"conditions": {},
+		"effects": {},
+		"choices": [
+			{
+				"text": "Publish Immediately",
+				"next_node": "story_publish",
+				"prunes_branches": ["story_suppress", "story_modify"],
+				"effects": {"influence": 15},
+				"cost": 0,
+				"requires": {}
+			},
+			{
+				"text": "Suppress the Story",
+				"next_node": "story_suppress",
+				"prunes_branches": ["story_publish", "story_modify"],
+				"effects": {"stress": 10},
+				"cost": 20,
+				"requires": {}
+			},
+			{
+				"text": "Modify the Narrative",
+				"next_node": "story_modify",
+				"prunes_branches": ["story_publish", "story_suppress"],
+				"effects": {"capacity": 5},
+				"cost": 10,
+				"requires": {}
+			}
+		]
+	},
+	{
+		"node_id": "story_publish",
+		"title": "Truth Revealed",
+		"description": "The story runs. Public reaction is intense but trust increases.",
+		"conditions": {},
+		"effects": {"influence": 20, "stress": -10, "capacity": 5},
+		"choices": []
+	},
+	{
+		"node_id": "story_suppress",
+		"title": "Story Buried",
+		"description": "The story never sees light. But whispers persist in the shadows.",
+		"conditions": {},
+		"effects": {"stress": 15, "capacity": -10},
+		"choices": []
+	},
+	{
+		"node_id": "story_modify",
+		"title": "Controlled Release",
+		"description": "A sanitized version runs. The full truth remains hidden.",
+		"conditions": {},
+		"effects": {"influence": 5, "capacity": -5},
+		"choices": []
+	}
+]

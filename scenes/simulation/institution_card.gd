@@ -82,11 +82,12 @@ func update_actions() -> void:
 	for child in actions_container.get_children():
 		child.queue_free()
 	
-	# Get available actions from config
-	if institution_config:
-		available_actions = event_manager.get_available_actions_from_config(institution, institution_config)
-	else:
-		available_actions = []
+	# Get available actions from current stress event (if any)
+	available_actions = []
+	if institution_config and institution.stress >= institution.strength:
+		var stress_event = event_manager.get_current_stress_event(institution, institution_config)
+		if not stress_event.is_empty():
+			available_actions = stress_event.get("choices", [])
 	
 	for action_node in available_actions:
 		var button = Button.new()
@@ -102,14 +103,18 @@ func update_actions() -> void:
 		button.pressed.connect(_on_action_node_pressed.bind(action_node))
 		actions_container.add_child(button)
 
-## Format cost for button display
-func _format_cost(cost: Dictionary) -> String:
-	var parts: Array[String] = []
-	if cost.get("cash", 0.0) > 0:
-		parts.append("$%.0f" % cost["cash"])
-	if cost.get("bandwidth", 0.0) > 0:
-		parts.append("%.0f BW" % cost["bandwidth"])
-	return ", ".join(parts)
+## Format cost for button display (cost is an int representing bandwidth)
+func _format_cost(cost) -> String:
+	if cost is int and cost > 0:
+		return "%d BW" % cost
+	elif cost is Dictionary:
+		var parts: Array[String] = []
+		if cost.get("cash", 0.0) > 0:
+			parts.append("$%.0f" % cost["cash"])
+		if cost.get("bandwidth", 0.0) > 0:
+			parts.append("%.0f BW" % cost["bandwidth"])
+		return ", ".join(parts)
+	return ""
 
 ## Format tooltip with full action details
 func _format_tooltip(action_node: Dictionary) -> String:
@@ -120,9 +125,13 @@ func _format_tooltip(action_node: Dictionary) -> String:
 	if not desc.is_empty():
 		lines.append(desc)
 	
-	# Cost section
-	var cost = action_node.get("cost", {})
-	if not cost.is_empty():
+	# Cost section (cost is an int representing bandwidth)
+	var cost = action_node.get("cost", 0)
+	if cost is int and cost > 0:
+		lines.append("")
+		lines.append("== Cost ==")
+		lines.append("  Bandwidth: %d" % cost)
+	elif cost is Dictionary and not cost.is_empty():
 		lines.append("")
 		lines.append("== Cost ==")
 		if cost.get("cash", 0.0) > 0:
@@ -162,8 +171,9 @@ func _on_action_node_pressed(action_node: Dictionary) -> void:
 	var success = event_manager.execute_player_action(action_node, institution)
 	if success:
 		update_display()
-		# Notify parent to update dashboard
+		# Notify parent to update dashboard and refresh event tree
 		get_tree().call_group("simulation_root", "_update_dashboard")
+		get_tree().call_group("simulation_root", "_refresh_event_tree")
 	else:
 		# Visual feedback for failure (e.g., can't afford)
 		modulate = Color.RED

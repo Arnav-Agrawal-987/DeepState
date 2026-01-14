@@ -8,16 +8,16 @@ region_id = "novara"
 region_name = "Republic of Novara"
 region_description = "A post-industrial democracy facing institutional fragmentation. Media independence is under pressure from centralizing forces. The military maintains strong ties to intelligence services."
 institution_config_paths = {
-"govt": "res://assets/institutions/govt_novara.tres",
-"military": "res://assets/institutions/military_novara.tres",
-"intelligence": "res://assets/institutions/intel_novara.tres",
-"media": "res://assets/institutions/media_novara.tres"
+"govt_novara": "res://assets/institutions/govt_novara.tres",
+"military_novara": "res://assets/institutions/military_novara.tres",
+"intel_novara": "res://assets/institutions/intel_novara.tres",
+"media_novara": "res://assets/institutions/media_novara.tres"
 }
 initial_dependencies = {
-"govt": {"military": 0.8, "media": 0.6, "intelligence": 0.5},
-"military": {"intelligence": 0.75},
-"intelligence": {"media": 0.4, "military": 0.3},
-"media": {"govt": 0.45}
+"govt_novara": {"military_novara": 0.8, "media_novara": 0.6, "intel_novara": 0.5},
+"military_novara": {"intel_novara": 0.75},
+"intel_novara": {"media_novara": 0.4, "military_novara": 0.3},
+"media_novara": {"govt_novara": 0.45}
 }
 currencies = {
 "cash": {"initial": 1000.0, "fallback": 500.0, "max": 999999.0},

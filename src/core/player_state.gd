@@ -56,6 +56,11 @@ func increase_exposure(amount: float) -> void:
 	exposure = min(exposure + amount, MAX_EXPOSURE)
 	exposure_changed.emit(exposure)
 
+## Decrease exposure (from beneficial actions)
+func decrease_exposure(amount: float) -> void:
+	exposure = max(exposure - amount, 0.0)
+	exposure_changed.emit(exposure)
+
 ## Apply daily exposure decay
 func decay_exposure(day_count: int = 1) -> void:
 	exposure = max(exposure - (exposure_decay * day_count), 0.0)
@@ -65,6 +70,47 @@ func decay_exposure(day_count: int = 1) -> void:
 ## Note: Full calculation happens in crisis system
 func get_exposure_factor() -> float:
 	return exposure / MAX_EXPOSURE
+
+## Calculate player relevance score
+## Relevance = function of total influence across all institutions + exposure
+## Higher relevance = more impact on events but also more risk
+func calculate_relevance(institutions: Array) -> float:
+	var total_influence = 0.0
+	var max_possible_influence = institutions.size() * 100.0
+	
+	for inst in institutions:
+		total_influence += inst.player_influence
+	
+	# Influence factor (0 to 1)
+	var influence_factor = total_influence / max(max_possible_influence, 1.0)
+	
+	# Exposure factor (0 to 1)
+	var exposure_factor = exposure / MAX_EXPOSURE
+	
+	# Relevance = weighted combination
+	# More influence = more relevance
+	# More exposure = can increase or decrease relevance depending on context
+	var relevance = (influence_factor * 0.7 + exposure_factor * 0.3) * 100.0
+	
+	return clamp(relevance, 0.0, 100.0)
+
+## Get relevance breakdown for display
+func get_relevance_breakdown(institutions: Array) -> Dictionary:
+	var total_influence = 0.0
+	var influence_by_type: Dictionary = {}
+	
+	for inst in institutions:
+		total_influence += inst.player_influence
+		var type_name = inst.get_type_string()
+		influence_by_type[type_name] = influence_by_type.get(type_name, 0.0) + inst.player_influence
+	
+	return {
+		"total_influence": total_influence,
+		"average_influence": total_influence / max(institutions.size(), 1),
+		"influence_by_type": influence_by_type,
+		"exposure": exposure,
+		"relevance": calculate_relevance(institutions)
+	}
 
 ## Serialize state for saving
 func to_dict() -> Dictionary:

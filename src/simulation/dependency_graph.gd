@@ -41,11 +41,109 @@ func calculate_stress_propagation(source_id: String, target_id: String) -> float
 		return edges[source_id][target_id]
 	return 0.0
 
-## Rewire dependencies after crisis
-## Institutions attempt to improve resilience by adjusting edges
+## Apply crisis effects to the dependency graph
+## Rewiring based on distance from epicenter:
+## - Adjacent (1st level): weight += 0.5 * (epicenter_stress / epicenter_strength)
+## - 2nd level: weight += 0.25 * ratio
+## - 3rd level+: no effect
+func apply_crisis_effects(crisis_effects: Dictionary, inst_manager: InstitutionManager) -> void:
+	print("[DependencyGraph] === APPLYING CRISIS EFFECTS ===")
+	
+	# Get all institutions and find epicenter
+	var institutions = inst_manager.get_all_institutions()
+	
+	# Find the epicenter (highest stress institution)
+	var epicenter: Institution = null
+	var max_stress = 0.0
+	for inst in institutions:
+		if inst.stress > max_stress:
+			max_stress = inst.stress
+			epicenter = inst
+	
+	if not epicenter:
+		print("[DependencyGraph] No epicenter found!")
+		return
+	
+	var epicenter_id = epicenter.institution_id
+	var stress_ratio = epicenter.stress / max(epicenter.strength, 1.0)
+	
+	print("[DependencyGraph] Epicenter: %s" % epicenter_id)
+	print("[DependencyGraph] Epicenter Stress: %.1f / Strength: %.1f = Ratio: %.3f" % [
+		epicenter.stress, epicenter.strength, stress_ratio
+	])
+	
+	# Calculate multipliers based on stress ratio
+	var level_1_multiplier = 0.5 * stress_ratio   # Adjacent to epicenter
+	var level_2_multiplier = 0.25 * stress_ratio  # 2nd level from epicenter
+	
+	print("[DependencyGraph] Level 1 (adjacent) multiplier: +%.3f" % level_1_multiplier)
+	print("[DependencyGraph] Level 2 multiplier: +%.3f" % level_2_multiplier)
+	
+	var changes_made = 0
+	
+	# Get 1st level neighbors (direct connections FROM epicenter)
+	var level_1_nodes: Array = []
+	if epicenter_id in edges:
+		for target_id in edges[epicenter_id]:
+			level_1_nodes.append(target_id)
+			# Apply level 1 effect to edges FROM epicenter
+			var old_weight = edges[epicenter_id][target_id]
+			var new_weight = clamp(old_weight + level_1_multiplier, 0.0, 1.0)
+			edges[epicenter_id][target_id] = new_weight
+			print("  [L1] Edge %s -> %s: %.3f -> %.3f (+%.3f)" % [
+				epicenter_id, target_id, old_weight, new_weight, level_1_multiplier
+			])
+			changes_made += 1
+	
+	# Get 2nd level neighbors (connections FROM level 1 nodes, excluding epicenter)
+	var level_2_nodes: Array = []
+	for l1_node in level_1_nodes:
+		if l1_node in edges:
+			for target_id in edges[l1_node]:
+				# Skip if target is epicenter or already in level 1
+				if target_id == epicenter_id or target_id in level_1_nodes:
+					continue
+				# Skip if already processed as level 2
+				if target_id in level_2_nodes:
+					continue
+				
+				level_2_nodes.append(target_id)
+				
+				# Apply level 2 effect to edges FROM level 1 nodes
+				var old_weight = edges[l1_node][target_id]
+				var new_weight = clamp(old_weight + level_2_multiplier, 0.0, 1.0)
+				edges[l1_node][target_id] = new_weight
+				print("  [L2] Edge %s -> %s: %.3f -> %.3f (+%.3f)" % [
+					l1_node, target_id, old_weight, new_weight, level_2_multiplier
+				])
+				changes_made += 1
+	
+	# Also apply to edges TO epicenter (incoming edges get affected too)
+	var incoming = get_incoming_edges(epicenter_id)
+	for source_id in incoming:
+		if source_id in level_1_nodes:
+			continue  # Already processed
+		var old_weight = edges[source_id][epicenter_id]
+		var new_weight = clamp(old_weight + level_1_multiplier, 0.0, 1.0)
+		edges[source_id][epicenter_id] = new_weight
+		print("  [L1-IN] Edge %s -> %s: %.3f -> %.3f (+%.3f)" % [
+			source_id, epicenter_id, old_weight, new_weight, level_1_multiplier
+		])
+		changes_made += 1
+	
+	print("[DependencyGraph] Level 1 nodes: %s" % str(level_1_nodes))
+	print("[DependencyGraph] Level 2 nodes: %s" % str(level_2_nodes))
+	print("[DependencyGraph] Crisis made %d edge changes" % changes_made)
+
+## Rewire dependencies after crisis resolution
+## Institutions ALWAYS attempt to improve resilience after a crisis
 func rewire_for_resilience(inst_manager: InstitutionManager) -> void:
-	# For each institution, try to reduce incoming stress sources
-	# and increase outgoing stability
+	print("[DependencyGraph] === REWIRING FOR RESILIENCE ===")
+	
+	var changes_made = 0
+	
+	# For each institution, reduce dependencies on stressed institutions
+	# and slightly strengthen stable connections
 	for inst_id in edges.keys():
 		var inst = inst_manager.get_institution(inst_id)
 		if inst == null:
@@ -53,10 +151,54 @@ func rewire_for_resilience(inst_manager: InstitutionManager) -> void:
 		
 		var current_outgoing = edges[inst_id].duplicate()
 		for target_id in current_outgoing:
-			# Reduce weight of high-stress dependencies
 			var target = inst_manager.get_institution(target_id)
-			if target and target.stress > target.strength * 0.7:
-				edges[inst_id][target_id] *= 0.8
+			if not target:
+				continue
+			
+			var target_stress_ratio = target.stress / max(target.strength, 1.0)
+			var old_weight = edges[inst_id][target_id]
+			var new_weight = old_weight
+			
+			# Reduce weight to stressed institutions (>30% stress ratio)
+			if target_stress_ratio > 0.3:
+				var reduction = 0.1 * target_stress_ratio  # More stress = more reduction
+				new_weight = clamp(old_weight - reduction, 0.05, 1.0)  # Don't go below 0.05
+				print("  [RESILIENCE] Edge %s -> %s: %.3f -> %.3f (target stressed %.0f%%)" % [
+					inst_id, target_id, old_weight, new_weight, target_stress_ratio * 100
+				])
+				changes_made += 1
+			# Slightly increase weight to stable institutions (<20% stress ratio)
+			elif target_stress_ratio < 0.2 and old_weight < 0.9:
+				var increase = 0.05 * (1.0 - target_stress_ratio)
+				new_weight = clamp(old_weight + increase, 0.0, 0.95)
+				print("  [RESILIENCE] Edge %s -> %s: %.3f -> %.3f (target stable)" % [
+					inst_id, target_id, old_weight, new_weight
+				])
+				changes_made += 1
+			
+			edges[inst_id][target_id] = new_weight
+	
+	print("[DependencyGraph] Resilience rewiring made %d edge changes" % changes_made)
+
+## Propagate stress through the graph based on edge weights
+## Called when stress changes on an institution
+func propagate_stress(source_inst: Institution, inst_manager: InstitutionManager) -> void:
+	var source_id = source_inst.institution_id
+	if not source_id in edges:
+		return
+	
+	var outgoing = edges[source_id]
+	for target_id in outgoing:
+		var weight = outgoing[target_id]
+		var target = inst_manager.get_institution(target_id)
+		if target:
+			# Propagate a portion of source stress based on weight
+			var propagated_stress = source_inst.stress * weight * 0.1  # 10% of stress * weight
+			if propagated_stress > 1.0:
+				target.apply_stress(propagated_stress)
+				print("[DependencyGraph] Propagated %.1f stress from %s to %s (weight: %.2f)" % [
+					propagated_stress, source_id, target_id, weight
+				])
 
 ## Serialize graph
 func to_dict() -> Dictionary:
@@ -67,3 +209,41 @@ func to_dict() -> Dictionary:
 ## Deserialize graph
 func from_dict(data: Dictionary) -> void:
 	edges = data.get("edges", {})
+
+## Print all current graph weights in a readable format
+func print_graph_weights(header: String = "GRAPH STATE", epicenter_id: String = "") -> void:
+	print("")
+	print("╔══════════════════════════════════════════════════════════════╗")
+	print("║ %s" % header.to_upper())
+	if epicenter_id != "":
+		print("║ Change originated from: %s" % epicenter_id)
+	print("╠══════════════════════════════════════════════════════════════╣")
+	
+	if edges.is_empty():
+		print("║ (No edges in graph)")
+	else:
+		for source_id in edges:
+			var outgoing = edges[source_id]
+			for target_id in outgoing:
+				var weight = outgoing[target_id]
+				var bar = _weight_to_bar(weight)
+				print("║ %s → %s: %.3f %s" % [
+					source_id.substr(0, 12).rpad(12),
+					target_id.substr(0, 12).rpad(12),
+					weight,
+					bar
+				])
+	
+	print("╚══════════════════════════════════════════════════════════════╝")
+	print("")
+
+## Helper to visualize weight as ASCII bar
+func _weight_to_bar(weight: float) -> String:
+	var bar_length = int(weight * 10)
+	var bar = ""
+	for i in range(10):
+		if i < bar_length:
+			bar += "█"
+		else:
+			bar += "░"
+	return "[%s]" % bar

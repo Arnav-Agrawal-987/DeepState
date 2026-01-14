@@ -18,9 +18,9 @@ class_name EventTreeViewer
 var institution_configs: Dictionary = {}  # inst_id -> InstitutionConfig
 var region_config: RegionConfig
 var current_institution_id: String = ""
-var current_tree_type: int = 0  # 0 = Player Actions, 1 = Autonomous Events
+var current_tree_type: int = 0  # 0 = Stress Triggered, 1 = Random Triggered, 2 = Crisis
 
-enum TreeType { PLAYER_ACTIONS, AUTONOMOUS_EVENTS, CRISIS_TREE }
+enum TreeType { STRESS_TRIGGERED, RANDOM_TRIGGERED, CRISIS_TREE }
 
 func _ready() -> void:
 	_load_data()
@@ -54,14 +54,17 @@ func _create_fallback_configs() -> void:
 		var config = InstitutionConfig.new()
 		config.institution_id = default_ids[i]
 		config.institution_name = default_names[i]
-		config.create_default_player_tree()
-		config.create_default_autonomous_tree()
+		# Event trees should be defined in .tres files, not generated programmatically
+		config.stress_triggered_tree = []
+		config.randomly_triggered_tree = []
 		institution_configs[default_ids[i]] = config
+	
+	push_warning("EventTreeViewer: Using empty configs - load actual .tres files for data")
 
 ## Setup tree type dropdown
 func _setup_tree_type_options() -> void:
-	tree_type_option.add_item("Player Actions", TreeType.PLAYER_ACTIONS)
-	tree_type_option.add_item("Autonomous Events", TreeType.AUTONOMOUS_EVENTS)
+	tree_type_option.add_item("Stress Triggered", TreeType.STRESS_TRIGGERED)
+	tree_type_option.add_item("Random Triggered", TreeType.RANDOM_TRIGGERED)
 	tree_type_option.add_item("Crisis Tree (Region)", TreeType.CRISIS_TREE)
 	tree_type_option.select(0)
 
@@ -96,73 +99,92 @@ func _refresh_tree() -> void:
 	var root = event_tree.create_item()
 	
 	match current_tree_type:
-		TreeType.PLAYER_ACTIONS:
-			_build_player_tree(root)
-		TreeType.AUTONOMOUS_EVENTS:
-			_build_autonomous_tree(root)
+		TreeType.STRESS_TRIGGERED:
+			_build_stress_tree(root)
+		TreeType.RANDOM_TRIGGERED:
+			_build_random_tree(root)
 		TreeType.CRISIS_TREE:
 			_build_crisis_tree(root)
 
-## Build player action tree
-func _build_player_tree(root: TreeItem) -> void:
+## Build stress-triggered event tree
+func _build_stress_tree(root: TreeItem) -> void:
 	if current_institution_id.is_empty() or current_institution_id not in institution_configs:
 		return
 	
 	var config = institution_configs[current_institution_id]
 	
-	for action_node in config.player_event_tree:
-		var item = event_tree.create_item(root)
-		var title = action_node.get("title", "Unknown Action")
-		var node_id = action_node.get("node_id", "")
-		
-		# Format display
-		var display_text = title
-		var conditions = action_node.get("conditions", {})
-		if not conditions.is_empty():
-			var cond_hints = []
-			if conditions.get("min_influence", 0) > 0:
-				cond_hints.append("Inf>=%d" % conditions["min_influence"])
-			if not cond_hints.is_empty():
-				display_text += " [%s]" % ", ".join(cond_hints)
-		
-		item.set_text(0, display_text)
-		item.set_metadata(0, {"type": "player", "node": action_node})
-		
-		# Add child choices if any
-		var choices = action_node.get("choices", [])
-		for choice in choices:
-			var choice_item = event_tree.create_item(item)
-			choice_item.set_text(0, "→ " + choice.get("label", "Choice"))
-			choice_item.set_metadata(0, {"type": "choice", "node": choice, "parent": action_node})
-
-## Build autonomous event tree
-func _build_autonomous_tree(root: TreeItem) -> void:
-	if current_institution_id.is_empty() or current_institution_id not in institution_configs:
-		return
-	
-	var config = institution_configs[current_institution_id]
-	
-	for event_node in config.autonomous_event_tree:
+	for event_node in config.stress_triggered_tree:
 		var item = event_tree.create_item(root)
 		var title = event_node.get("title", "Unknown Event")
+		var node_id = event_node.get("node_id", "")
 		
-		# Show trigger conditions
-		var conditions = event_node.get("trigger_conditions", {})
-		var trigger_text = ""
-		if conditions.get("stress_above", 0) > 0:
-			trigger_text = " [Stress>%d]" % conditions["stress_above"]
-		elif conditions.get("strength_below", 0) > 0:
-			trigger_text = " [Strength<%d]" % conditions["strength_below"]
+		# Format display
+		var display_text = "[%s] %s" % [node_id, title]
+		var conditions = event_node.get("conditions", {})
+		if not conditions.is_empty():
+			var cond_hints = []
+			for key in conditions:
+				cond_hints.append("%s=%s" % [key, conditions[key]])
+			if not cond_hints.is_empty():
+				display_text += " {%s}" % ", ".join(cond_hints)
 		
-		item.set_text(0, title + trigger_text)
-		item.set_metadata(0, {"type": "autonomous", "node": event_node})
+		item.set_text(0, display_text)
+		item.set_metadata(0, {"type": "stress", "node": event_node})
 		
-		# Add player choices
-		var choices = event_node.get("player_choices", [])
+		# Add child choices if any
+		var choices = event_node.get("choices", [])
 		for choice in choices:
 			var choice_item = event_tree.create_item(item)
-			choice_item.set_text(0, "→ " + choice.get("label", "Choice"))
-			choice_item.set_metadata(0, {"type": "auto_choice", "node": choice, "parent": event_node})
+			var choice_text = choice.get("text", "Choice")
+			var next_node = choice.get("next_node", "")
+			var prunes = choice.get("prunes_branches", [])
+			var display = "→ %s" % choice_text
+			if next_node != "":
+				display += " (→ %s)" % next_node
+			if not prunes.is_empty():
+				display += " [PRUNES: %s]" % ", ".join(prunes)
+			choice_item.set_text(0, display)
+			choice_item.set_metadata(0, {"type": "choice", "node": choice, "parent": event_node})
+
+## Build randomly-triggered event tree
+func _build_random_tree(root: TreeItem) -> void:
+	if current_institution_id.is_empty() or current_institution_id not in institution_configs:
+		return
+	
+	var config = institution_configs[current_institution_id]
+	
+	for event_node in config.randomly_triggered_tree:
+		var item = event_tree.create_item(root)
+		var title = event_node.get("title", "Unknown Event")
+		var node_id = event_node.get("node_id", "")
+		
+		# Format display
+		var display_text = "[%s] %s" % [node_id, title]
+		var conditions = event_node.get("conditions", {})
+		if not conditions.is_empty():
+			var cond_hints = []
+			for key in conditions:
+				cond_hints.append("%s=%s" % [key, conditions[key]])
+			if not cond_hints.is_empty():
+				display_text += " {%s}" % ", ".join(cond_hints)
+		
+		item.set_text(0, display_text)
+		item.set_metadata(0, {"type": "random", "node": event_node})
+		
+		# Add child choices if any
+		var choices = event_node.get("choices", [])
+		for choice in choices:
+			var choice_item = event_tree.create_item(item)
+			var choice_text = choice.get("text", "Choice")
+			var next_node = choice.get("next_node", "")
+			var prunes = choice.get("prunes_branches", [])
+			var display = "→ %s" % choice_text
+			if next_node != "":
+				display += " (→ %s)" % next_node
+			if not prunes.is_empty():
+				display += " [PRUNES: %s]" % ", ".join(prunes)
+			choice_item.set_text(0, display)
+			choice_item.set_metadata(0, {"type": "choice", "node": choice, "parent": event_node})
 
 ## Build crisis tree (region-level)
 func _build_crisis_tree(root: TreeItem) -> void:
@@ -239,14 +261,17 @@ func _show_player_action_details(node: Dictionary) -> void:
 	else:
 		conditions_label.text = "CONDITIONS: None"
 	
-	# Cost
-	var cost = node.get("cost", {})
-	if not cost.is_empty():
-		var cost_parts = []
+	# Cost (can be int for bandwidth or Dictionary)
+	var cost = node.get("cost", 0)
+	var cost_parts = []
+	if cost is int and cost > 0:
+		cost_parts.append("Bandwidth: %d" % cost)
+	elif cost is Dictionary and not cost.is_empty():
 		if cost.get("cash", 0) > 0:
 			cost_parts.append("Cash: $%.0f" % cost["cash"])
 		if cost.get("bandwidth", 0) > 0:
 			cost_parts.append("Bandwidth: %.0f" % cost["bandwidth"])
+	if not cost_parts.is_empty():
 		cost_label.text = "COST:\n" + "\n".join(cost_parts)
 	else:
 		cost_label.text = "COST: Free"
@@ -353,12 +378,15 @@ func _show_choice_details(choice: Dictionary, parent: Dictionary) -> void:
 	
 	conditions_label.text = ""
 	
-	# Cost
-	var cost = choice.get("cost", {})
-	if not cost.is_empty():
-		var cost_parts = []
+	# Cost (can be int for bandwidth or Dictionary)
+	var cost = choice.get("cost", 0)
+	var cost_parts = []
+	if cost is int and cost > 0:
+		cost_parts.append("Bandwidth: %d" % cost)
+	elif cost is Dictionary and not cost.is_empty():
 		for key in cost:
 			cost_parts.append("%s: %.0f" % [key.capitalize(), cost[key]])
+	if not cost_parts.is_empty():
 		cost_label.text = "CHOICE COST:\n" + "\n".join(cost_parts)
 	else:
 		cost_label.text = "CHOICE COST: Free"
@@ -403,8 +431,12 @@ func _create_choice_buttons(choices: Array, show_next: bool = false) -> void:
 func _format_choice_tooltip(choice: Dictionary) -> String:
 	var lines = [choice.get("label", "Choice")]
 	
-	var cost = choice.get("cost", {})
-	if not cost.is_empty():
+	# Cost can be int (bandwidth) or Dictionary
+	var cost = choice.get("cost", 0)
+	if cost is int and cost > 0:
+		lines.append("\nCost:")
+		lines.append("  Bandwidth: %d" % cost)
+	elif cost is Dictionary and not cost.is_empty():
 		lines.append("\nCost:")
 		for key in cost:
 			lines.append("  %s: %.0f" % [key.capitalize(), cost[key]])
