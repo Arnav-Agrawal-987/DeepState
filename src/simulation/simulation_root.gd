@@ -74,6 +74,7 @@ func _ready() -> void:
 	add_child(tension_mgr)
 	add_child(event_manager)
 	add_child(clock)
+	clock.name = "SimulationClock"  # Ensure proper name for lookup
 	
 	# Wire up event manager
 	event_manager.inst_manager = inst_manager
@@ -81,6 +82,7 @@ func _ready() -> void:
 	event_manager.tension_mgr = tension_mgr
 	event_manager.dep_graph = dep_graph  # NEW: Wire dependency graph for crisis effects
 	event_manager.institution_configs = institution_configs
+	event_manager.clock = clock  # Direct reference to clock
 	# save_state will be set after region initialization
 	
 	# Connect tension crisis signal
@@ -285,9 +287,11 @@ func _handle_player_turn_phase() -> void:
 
 ## Evaluate crisis outcome
 func _evaluate_crisis(epicenter: Institution) -> void:
-	# Calculate Deep State relevance
-	var relevance = _calculate_relevance()
-	const CRISIS_THRESHOLD: float = 0.3
+	# Calculate Deep State relevance using new graph-based algorithm
+	var relevance = _calculate_relevance(epicenter)
+	const CRISIS_THRESHOLD: float = 30.0  # Threshold is now on 0-100 scale
+	
+	print("[SimulationRoot] Crisis evaluation - Relevance: %.2f%% (threshold: %.2f%%)" % [relevance, CRISIS_THRESHOLD])
 	
 	if relevance < CRISIS_THRESHOLD:
 		# Game over - Deep State is no longer relevant
@@ -295,20 +299,21 @@ func _evaluate_crisis(epicenter: Institution) -> void:
 	else:
 		# Crisis survived, reset tension
 		tension_mgr.reset_after_crisis()
-		dep_graph.rewire_for_resilience(inst_manager)
+		# Apply graph morphing based on perceived influence
+		dep_graph.morph_after_crisis(player_state.exposure, inst_manager)
 
-## Calculate Deep State relevance during crisis
-func _calculate_relevance() -> float:
-	var total_influence = 0.0
-	var inst_count = float(inst_manager.get_all_institutions().size())
+## Calculate Deep State relevance during crisis using graph-based algorithm
+## Uses the institution manager's crisis relevance calculation
+func _calculate_relevance(epicenter: Institution = null) -> float:
+	# If no epicenter provided, select one (for dashboard display)
+	if epicenter == null:
+		epicenter = inst_manager.select_crisis_epicenter()
 	
-	for inst in inst_manager.get_all_institutions():
-		total_influence += inst.player_influence / 100.0
+	if epicenter == null:
+		return 0.0
 	
-	var influence_score = total_influence / inst_count if inst_count > 0 else 0.0
-	var exposure_penalty = player_state.get_exposure_factor() * 0.5
-	
-	return max(influence_score - exposure_penalty, 0.0)
+	# Use the new graph-based relevance calculation
+	return inst_manager.calculate_crisis_relevance(epicenter, dep_graph)
 
 ## Game over - player lost
 func _end_game_lost() -> void:
@@ -323,15 +328,16 @@ func _end_game_lost() -> void:
 func _on_crisis(epicenter: Institution) -> void:
 	print("Crisis triggered at %s" % epicenter.institution_name)
 
-## Institution stress reached 100% - queue event for processing
+## Institution stress reached 100% - queue event for processing on next day advance
+## NEW: Adds to decision_queue instead of pending_events, shows on next Advance Day
 func _on_institution_stress_maxed(institution: Institution) -> void:
 	_log_console("⚠ %s stress maxed out!" % institution.institution_name)
 	
-	# Queue the event to pending events instead of showing immediately
+	# Queue the event to decision_queue - will show on next Advance Day
 	if institution.institution_id in institution_configs:
 		var config: InstitutionConfig = institution_configs[institution.institution_id]
 		
-		print("[SimulationRoot] Stress maxed for %s - queueing event" % institution.institution_id)
+		print("[SimulationRoot] Stress maxed for %s - queueing to decision_queue" % institution.institution_id)
 		
 		# Get current stress event from tree
 		var tree_state = save_state.get_stress_tree_state(institution.institution_id) if save_state else {"current_node": "", "pruned_branches": []}
@@ -341,18 +347,15 @@ func _on_institution_stress_maxed(institution: Institution) -> void:
 		var event_node = config.get_current_stress_event(current_node, pruned_branches)
 		
 		if not event_node.is_empty():
-			# Add to event manager's pending events queue
-			var event_key = {
+			# Add to decision_queue (NEW system) - will be shown on Advance Day
+			var queue_entry = {
 				"event": event_node,
 				"type": EventManager.EventType.STRESS,
-				"inst_id": institution.institution_id
+				"inst_id": institution.institution_id,
+				"institution": institution
 			}
-			event_manager.pending_events[event_key] = institution
-			_log_console("📢 Event queued: %s" % event_node.get("title", "?"))
-			
-			# If no event is currently being shown, show this one
-			if not event_dialog.visible:
-				_show_pending_events_as_dialogs()
+			event_manager.decision_queue.append(queue_entry)
+			_log_console("📢 Event queued for next day: %s (Queue: %d)" % [event_node.get("title", "?"), event_manager.get_decision_queue_size()])
 			return
 	else:
 		push_warning("[SimulationRoot] No config found for institution: %s" % institution.institution_id)
@@ -1071,13 +1074,24 @@ func _on_quit_pressed() -> void:
 	get_tree().quit()
 
 ## Show event dialog with choices
-func show_event_dialog(event_node: Dictionary, institution: Institution, choices: Array, is_player_action: bool = false) -> void:
+## Now supports queue position display for queued events
+func show_event_dialog(event_node: Dictionary, institution: Institution, choices: Array, is_player_action: bool = false, queue_position: int = 0, queue_total: int = 0) -> void:
 	current_event_institution = institution
 	pending_event_choices = choices
 	current_pending_event_node = event_node
 	current_pending_event_is_player_action = is_player_action
 	
-	event_title.text = event_node.get("title", "Event")
+	print("[DEBUG] show_event_dialog called")
+	print("[DEBUG] Event: %s" % event_node.get("title", "?"))
+	print("[DEBUG] Choices count: %d" % choices.size())
+	print("[DEBUG] Queue position: %d/%d" % [queue_position, queue_total])
+	
+	# Build title with queue position if applicable
+	var title_text = event_node.get("title", "Event")
+	if queue_total > 0 and queue_position > 0:
+		title_text = "[%d/%d] %s" % [queue_position, queue_total, title_text]
+	event_title.text = title_text
+	
 	event_description.text = event_node.get("description", "Something has happened...")
 	
 	# Show auto effects
@@ -1096,9 +1110,18 @@ func show_event_dialog(event_node: Dictionary, institution: Institution, choices
 	
 	# Create choice buttons
 	if choices.is_empty():
-		event_close_btn.visible = true
+		# No choices - add skip/acknowledge button that works with queue
+		event_close_btn.visible = false
+		var ack_btn = Button.new()
+		ack_btn.custom_minimum_size = Vector2(0, 40)
+		ack_btn.text = "Acknowledge"
+		ack_btn.pressed.connect(_on_event_skip)
+		event_choices_container.add_child(ack_btn)
+		print("[DEBUG] No choices - added Acknowledge button")
 	else:
 		event_close_btn.visible = false
+		var any_affordable = false
+		
 		for i in range(choices.size()):
 			var choice = choices[i]
 			var btn = Button.new()
@@ -1108,6 +1131,12 @@ func show_event_dialog(event_node: Dictionary, institution: Institution, choices
 			var label = choice.get("label", choice.get("text", "Choice %d" % (i + 1)))
 			var cost = choice.get("cost", 0)
 			var cost_parts = []
+			
+			# Check affordability
+			var can_afford = _can_afford_choice(cost)
+			if can_afford:
+				any_affordable = true
+			
 			if cost is int and cost > 0:
 				cost_parts.append("%d BW" % cost)
 			elif cost is Dictionary and not cost.is_empty():
@@ -1118,14 +1147,92 @@ func show_event_dialog(event_node: Dictionary, institution: Institution, choices
 			if not cost_parts.is_empty():
 				label += " (%s)" % ", ".join(cost_parts)
 			
+			# Mark unaffordable choices
+			if not can_afford:
+				label += " [CANNOT AFFORD]"
+				btn.disabled = true
+			
 			btn.text = label
 			btn.pressed.connect(_on_event_choice_selected.bind(i))
 			event_choices_container.add_child(btn)
+		
+		# Add "Do Nothing" option if no choices are affordable
+		if not any_affordable:
+			var skip_btn = Button.new()
+			skip_btn.custom_minimum_size = Vector2(0, 40)
+			skip_btn.text = "Do Nothing (Skip)"
+			skip_btn.pressed.connect(_on_event_skip)
+			event_choices_container.add_child(skip_btn)
 	
 	event_dialog.visible = true
 
-## Event choice selected
+## Check if player can afford a choice cost
+func _can_afford_choice(cost) -> bool:
+	if cost is int:
+		return player_state.bandwidth >= cost
+	elif cost is Dictionary:
+		var cash_cost = cost.get("cash", 0.0)
+		var bandwidth_cost = cost.get("bandwidth", 0.0)
+		return player_state.cash >= cash_cost and player_state.bandwidth >= bandwidth_cost
+	return true  # No cost = affordable
+
+## Event skipped (do nothing) - Updated to use decision queue
+func _on_event_skip() -> void:
+	# Try queue-based skip first
+	if event_manager.has_pending_decisions():
+		var result = event_manager.skip_queue_decision()
+		if not result.is_empty():
+			_log_console("Skipped event: %s" % result.get("event", {}).get("title", "Unknown"))
+	else:
+		_log_console("Skipped event: %s" % current_pending_event_node.get("title", "Unknown"))
+	
+	# Clear pending event state
+	current_event_institution = null
+	pending_event_choices = []
+	current_pending_event_node = {}
+	
+	# Close dialog
+	event_dialog.visible = false
+	
+	# Show next pending event OR complete day if queue empty
+	if event_manager.has_pending_decisions():
+		_show_pending_events_as_dialogs()
+	else:
+		_complete_day_after_decisions()
+
+## Event choice selected - Updated to use decision queue
 func _on_event_choice_selected(choice_index: int) -> void:
+	# First try the decision queue system
+	if event_manager.has_pending_decisions():
+		var result = event_manager.resolve_queue_decision(choice_index)
+		if result.is_empty():
+			return
+		if result.has("error"):
+			_log_console("Cannot afford this choice!")
+			return
+		
+		# Show effects feedback
+		var effects = result.get("effects_applied", {})
+		if not effects.is_empty():
+			var effect_lines = []
+			for key in effects:
+				effect_lines.append("%s: %+.0f" % [key.replace("_", " ").capitalize(), effects[key]])
+			_log_console("Effects: %s" % ", ".join(effect_lines))
+		
+		var choice = result.get("choice", {})
+		var choice_label = choice.get("label", choice.get("text", "Unknown"))
+		_log_console("Chose: %s" % choice_label)
+		
+		event_dialog.visible = false
+		
+		# Show next queued event OR complete day if queue empty
+		if event_manager.has_pending_decisions():
+			_show_pending_events_as_dialogs()
+		else:
+			_complete_day_after_decisions()
+		return
+	
+	# Fallback to old system for backwards compatibility
 	if choice_index >= pending_event_choices.size():
 		return
 	
@@ -1236,72 +1343,181 @@ func _connect_debug_buttons() -> void:
 			print("[ERROR] Button not found: %s" % btn_name)
 
 ## DEBUG: Advance to next day
+## NEW FLOW:
+## 1. Increment day
+## 2. Apply delayed effects from previous day
+## 3. Collect events silently (stress effects applied, random event queued)
+## 4. Show decision popups from queue (blocking)
+## 5. After ALL decisions resolved -> daily updates + event tree refresh
 func _on_debug_advance_day() -> void:
 	var insts = inst_manager.get_all_institutions()
 	
-	# Step 0: Apply delayed effects from previous day's decisions
-	print("[SimulationRoot] === APPLYING DELAYED EFFECTS FROM YESTERDAY ===")
+	# Step 0: Increment day first (events happen at START of new day)
+	clock.current_day += 1
+	_log_console("Day advanced to: %d" % clock.current_day)
+	
+	# Step 1: Apply delayed effects from previous day's decisions
+	print("[SimulationRoot] === DAY %d START - APPLYING DELAYED EFFECTS ===" % clock.current_day)
 	event_manager.apply_queued_effects()
 	
-	# Step 1: Daily updates for all institutions
+	# Step 2: Collect day start events SILENTLY (no popups yet)
+	# - Stress events: effects applied immediately, NO popup
+	# - One random event: added to decision_queue for popup
+	event_manager.collect_day_start_events(insts, region_config)
+	
+	print("[DEBUG] After collect_day_start_events:")
+	print("[DEBUG] decision_queue size: %d" % event_manager.get_decision_queue_size())
+	print("[DEBUG] has_pending_decisions: %s" % event_manager.has_pending_decisions())
+	
+	# Step 3: Show decision popups from queue (if any)
+	# Daily updates will happen AFTER all decisions are resolved
+	if event_manager.has_pending_decisions():
+		var queue_size = event_manager.get_decision_queue_size()
+		_log_console("📢 %d decision(s) pending!" % queue_size)
+		_show_pending_events_as_dialogs()
+		# NOTE: _complete_day_after_decisions() is called when queue is empty
+	else:
+		# No decisions pending, complete day immediately
+		print("[DEBUG] No pending decisions, completing day immediately")
+		_complete_day_after_decisions()
+
+## Complete daily updates AFTER all event decisions are resolved
+func _complete_day_after_decisions() -> void:
+	var insts = inst_manager.get_all_institutions()
+	
+	print("[SimulationRoot] === COMPLETING DAY %d (all decisions resolved) ===" % clock.current_day)
+	
+	# Daily updates for all institutions (resets action counters, strength regen)
 	for inst in insts:
 		inst.daily_auto_update()
 		inst.apply_stress_decay()
 	
-	# Step 2: Collect day start events using new system
-	# Note: This also triggers exposure increase and autonomous effects when events trigger
-	var pending = event_manager.collect_day_start_events(insts, region_config)
+	# Calculate and apply daily passive income
+	_apply_daily_income(insts)
 	
-	# Step 3: End of day updates
+	# End of day updates
 	player_state.decay_exposure()
-	clock.current_day += 1
-	_log_console("Day advanced to: %d" % clock.current_day)
-	_update_dashboard()
-	
-	# Step 4: Display pending events as bubbles (for now, show count)
-	if not pending.is_empty():
-		_log_console("📢 %d events triggered! (Events shown as bubbles)" % pending.size())
-		# For now, show each event in a dialog sequentially
-		# TODO: Replace with UI bubbles system
-		_show_pending_events_as_dialogs()
-
-## Show pending events as dialogs (temporary until bubble UI is implemented)
-func _show_pending_events_as_dialogs() -> void:
-	var pending = event_manager.get_pending_events()
-	if pending.is_empty():
-		return
-	
-	# Get first event to show
-	var first_key = pending.keys()[0]
-	var event_data = first_key.get("event", {})
-	var event_type = first_key.get("type", EventManager.EventType.STRESS)
-	var institution = pending[first_key]
-	
-	# Convert to dialog format
-	var choices = event_data.get("choices", [])
-	show_event_dialog(event_data, institution, choices, false)
-	
-	# Store for resolution
-	_current_pending_event_key = first_key
-
-## Current pending event key being displayed
-var _current_pending_event_key: Dictionary = {}
-
-## Handle event choice when using new system
-func _on_new_event_choice_selected(choice_index: int) -> void:
-	if _current_pending_event_key.is_empty():
-		return
-	
-	# Use the new resolve_event method
-	event_manager.resolve_event(_current_pending_event_key, choice_index)
-	_current_pending_event_key = {}
-	
 	_update_dashboard()
 	_refresh_event_tree()
-	event_dialog.visible = false
+
+## Calculate and apply daily passive income from institutions
+## Civilian: cash += influence * capacity * CONSTANT
+## Political/Military: bandwidth += influence * capacity * CONSTANT
+## All: exposure -= influence * CONSTANT
+const DAILY_INCOME_FACTOR: float = 0.0001  # Tunable constant for income (negligible for now)
+const DAILY_EXPOSURE_DECAY_FACTOR: float = 0.01  # Exposure decay per influence point (reduced)
+
+func _apply_daily_income(institutions: Array) -> void:
+	var total_cash_gain: float = 0.0
+	var total_bandwidth_gain: float = 0.0
+	var total_exposure_decay: float = 0.0
 	
-	# Show next event if any
-	_show_pending_events_as_dialogs()
+	for inst in institutions:
+		var influence = inst.player_influence
+		var capacity = inst.capacity
+		var income = influence * capacity * DAILY_INCOME_FACTOR
+		
+		match inst.institution_type:
+			Institution.InstitutionType.CIVILIAN:
+				# Civilian institutions generate cash
+				total_cash_gain += income
+			Institution.InstitutionType.POLICY, Institution.InstitutionType.MILITANT:
+				# Political and Military institutions generate bandwidth
+				total_bandwidth_gain += income
+			Institution.InstitutionType.INTELLIGENCE:
+				# Intelligence generates both (half each)
+				total_cash_gain += income * 0.5
+				total_bandwidth_gain += income * 0.5
+		
+		# Exposure decays based on total influence (more influence = more exposure loss)
+		total_exposure_decay += influence * DAILY_EXPOSURE_DECAY_FACTOR
+	
+	# Apply gains
+	if total_cash_gain > 0:
+		player_state.gain_cash(total_cash_gain)
+		print("[SimulationRoot] Daily cash income: +$%.1f" % total_cash_gain)
+	
+	if total_bandwidth_gain > 0:
+		player_state.gain_bandwidth(total_bandwidth_gain)
+		print("[SimulationRoot] Daily bandwidth income: +%.1f" % total_bandwidth_gain)
+	
+	if total_exposure_decay > 0:
+		player_state.decrease_exposure(total_exposure_decay)
+		print("[SimulationRoot] Daily exposure decay: -%.1f" % total_exposure_decay)
+
+## Show pending events from decision queue as dialogs (one at a time with "1/N" display)
+## NEW: Uses event_manager.decision_queue instead of pending_events
+func _show_pending_events_as_dialogs() -> void:
+	print("[DEBUG] _show_pending_events_as_dialogs called")
+	print("[DEBUG] has_pending_decisions: %s" % event_manager.has_pending_decisions())
+	print("[DEBUG] queue size: %d" % event_manager.get_decision_queue_size())
+	
+	if not event_manager.has_pending_decisions():
+		print("[SimulationRoot] No pending decisions in queue")
+		return
+	
+	# Get the next event from the decision queue
+	var next_event = event_manager.peek_next_decision()
+	print("[DEBUG] peek_next_decision returned: %s" % str(next_event))
+	if next_event.is_empty():
+		print("[DEBUG] next_event is empty!")
+		return
+	
+	var event_data = next_event.get("event", {})
+	var institution = next_event.get("institution")
+	var queue_size = event_manager.get_decision_queue_size()
+	
+	# Convert to dialog format with queue position
+	var choices = event_data.get("choices", [])
+	print("[DEBUG] Event data choices: %s" % str(choices))
+	
+	# Show dialog with queue position (1/N format)
+	show_event_dialog(event_data, institution, choices, false, 1, queue_size)
+	
+	print("[SimulationRoot] Showing queued decision 1/%d: %s" % [queue_size, event_data.get("title", "?")])
+
+## Current pending event key being displayed (DEPRECATED - using decision queue now)
+var _current_pending_event_key: Dictionary = {}
+
+## Handle event choice when using new queue system
+## This is connected from existing choice button callbacks
+func _on_new_event_choice_selected(choice_index: int) -> void:
+	# Try the new queue-based resolution first
+	if event_manager.has_pending_decisions():
+		var result = event_manager.resolve_queue_decision(choice_index)
+		if result.is_empty() or result.has("error"):
+			_log_console("Cannot afford this choice!")
+			return
+		
+		# Show effects feedback
+		var effects = result.get("effects_applied", {})
+		if not effects.is_empty():
+			var effect_lines = []
+			for key in effects:
+				effect_lines.append("%s: %+.0f" % [key.replace("_", " ").capitalize(), effects[key]])
+			_log_console("Effects: %s" % ", ".join(effect_lines))
+		
+		event_dialog.visible = false
+		
+		# Show next event from queue OR complete day if queue empty
+		if event_manager.has_pending_decisions():
+			_show_pending_events_as_dialogs()
+		else:
+			# All decisions resolved, now complete daily updates
+			_complete_day_after_decisions()
+		return
+	
+	# Fallback to old system for backwards compatibility
+	if not _current_pending_event_key.is_empty():
+		event_manager.resolve_event(_current_pending_event_key, choice_index)
+		_current_pending_event_key = {}
+		
+		_update_dashboard()
+		_refresh_event_tree()
+		event_dialog.visible = false
+		
+		# Show next event if any
+		_show_pending_events_as_dialogs()
 
 ## DEBUG: Add stress to random institution
 func _on_debug_add_stress() -> void:
@@ -1426,19 +1642,56 @@ func _show_emergency_crisis_popup(crisis_event: Dictionary, epicenter: Instituti
 		close_btn.pressed.connect(_on_crisis_acknowledged.bind(crisis_event, epicenter))
 		crisis_choices_container.add_child(close_btn)
 	else:
+		var any_affordable = false
+		
 		for i in range(choices.size()):
 			var choice = choices[i]
 			var choice_btn = Button.new()
 			
+			# Check affordability
+			var cost = choice.get("cost", {})
+			var can_afford = _can_afford_choice(cost)
+			if can_afford:
+				any_affordable = true
+			
 			# Calculate randomized effects preview
 			var random_preview = _calculate_crisis_choice_preview(choice)
-			choice_btn.text = "%s\n%s" % [choice.get("text", "Option"), random_preview]
+			var choice_text = "%s\n%s" % [choice.get("text", "Option"), random_preview]
+			
+			if not can_afford:
+				choice_text += "\n[CANNOT AFFORD]"
+				choice_btn.disabled = true
+			
+			choice_btn.text = choice_text
 			choice_btn.tooltip_text = _format_crisis_choice_tooltip(choice)
 			choice_btn.pressed.connect(_on_emergency_crisis_choice.bind(i, crisis_event, epicenter))
 			crisis_choices_container.add_child(choice_btn)
+		
+		# Add skip option if no choices are affordable
+		if not any_affordable:
+			var skip_btn = Button.new()
+			skip_btn.text = "Do Nothing (Skip Crisis Response)"
+			skip_btn.pressed.connect(_on_crisis_skip.bind(crisis_event, epicenter))
+			crisis_choices_container.add_child(skip_btn)
 	
 	# Show overlay
 	crisis_overlay.visible = true
+
+## Skip crisis response (do nothing)
+func _on_crisis_skip(crisis_event: Dictionary, epicenter: Institution) -> void:
+	_log_console("Skipped crisis response - no action taken")
+	
+	# Reset tension but don't apply player choice effects
+	tension_mgr.reset_after_crisis()
+	
+	# Morph graph based on perceived deep state influence
+	if dep_graph:
+		dep_graph.morph_after_crisis(player_state.exposure, inst_manager)
+	
+	# Close popup
+	crisis_overlay.visible = false
+	_update_dashboard()
+	_refresh_event_tree()
 
 ## Calculate randomized effects preview for crisis choice
 func _calculate_crisis_choice_preview(choice: Dictionary) -> String:
@@ -1536,9 +1789,9 @@ func _on_emergency_crisis_choice(choice_index: int, crisis_event: Dictionary, ep
 	# Reset tension after crisis
 	tension_mgr.reset_after_crisis()
 	
-	# Rewire graph for resilience
+	# Morph graph based on perceived deep state influence
 	if dep_graph:
-		dep_graph.rewire_for_resilience(inst_manager)
+		dep_graph.morph_after_crisis(player_state.exposure, inst_manager)
 		# Print final graph state after crisis resolution
 		dep_graph.print_graph_weights("GRAPH AFTER CRISIS RESOLUTION", epicenter.institution_id)
 	
@@ -1614,9 +1867,9 @@ func _on_crisis_acknowledged(crisis_event: Dictionary, epicenter: Institution) -
 	# Reset tension
 	tension_mgr.reset_after_crisis()
 	
-	# Rewire graph
+	# Morph graph based on perceived deep state influence
 	if dep_graph:
-		dep_graph.rewire_for_resilience(inst_manager)
+		dep_graph.morph_after_crisis(player_state.exposure, inst_manager)
 	
 	# Close popup
 	crisis_overlay.visible = false
@@ -1651,10 +1904,9 @@ func _update_dashboard() -> void:
 	exposure_bar.value = player_state.exposure / player_state.max_exposure * 100.0
 	tension_bar.value = tension_mgr.global_tension / tension_mgr.crisis_threshold * 100.0
 	
-	# Update relevance
+	# Update relevance using new graph-based calculation
 	if relevance_label:
-		var insts = inst_manager.get_all_institutions()
-		var relevance = player_state.calculate_relevance(insts)
+		var relevance = _calculate_relevance()
 		relevance_label.text = "Relevance: %.1f%%" % relevance
 	
 	# Update queue button counts

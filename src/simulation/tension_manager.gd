@@ -26,17 +26,11 @@ func add_tension(amount: float) -> void:
 func check_crisis() -> bool:
 	return global_tension >= crisis_threshold
 
-## Get epicenter institution (highest stress)
+## Get epicenter institution (weighted random by stress)
+## Higher stress = higher probability of being selected
 func get_crisis_epicenter(inst_manager: InstitutionManager) -> Institution:
-	var epicenter = null
-	var max_stress = 0.0
-	
-	for inst in inst_manager.get_all_institutions():
-		if inst.stress > max_stress:
-			max_stress = inst.stress
-			epicenter = inst
-	
-	return epicenter
+	# Use the new weighted selection from institution manager
+	return inst_manager.select_crisis_epicenter()
 
 ## Trigger crisis event
 func trigger_crisis(epicenter: Institution) -> void:

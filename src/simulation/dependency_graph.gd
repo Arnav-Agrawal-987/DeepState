@@ -135,7 +135,101 @@ func apply_crisis_effects(crisis_effects: Dictionary, inst_manager: InstitutionM
 	print("[DependencyGraph] Level 2 nodes: %s" % str(level_2_nodes))
 	print("[DependencyGraph] Crisis made %d edge changes" % changes_made)
 
-## Rewire dependencies after crisis resolution
+## Graph morphing after crisis based on perceived deep state influence
+## Each institution calculates perceived influence of incoming neighbors:
+## - High exposure: perception is more accurate
+## - Low exposure: perception is more random
+## Then reduces highest-influence edge by 25% and increases lowest-influence edge by 25%
+const MORPH_PERCENT: float = 0.25  # 25% adjustment
+
+func morph_after_crisis(exposure: float, inst_manager: InstitutionManager) -> void:
+	print("[DependencyGraph] === GRAPH MORPHING AFTER CRISIS ===")
+	print("[DependencyGraph] Player exposure: %.1f%%" % exposure)
+	
+	var changes_made = 0
+	
+	# For each institution, adjust incoming edge weights based on perceived deep state influence
+	for inst_id in edges.keys():
+		var inst = inst_manager.get_institution(inst_id)
+		if inst == null:
+			continue
+		
+		# Get incoming edges for this institution
+		var incoming = get_incoming_edges(inst_id)
+		if incoming.size() < 2:
+			continue  # Need at least 2 edges to morph
+		
+		# Calculate perceived deep state influence for each incoming neighbor
+		var perceived_influences: Dictionary = {}  # source_id -> perceived_influence
+		
+		for source_id in incoming:
+			var source_inst = inst_manager.get_institution(source_id)
+			if not source_inst:
+				continue
+			
+			var actual_influence = source_inst.player_influence
+			var perceived = _calculate_perceived_influence(actual_influence, exposure)
+			perceived_influences[source_id] = perceived
+		
+		if perceived_influences.size() < 2:
+			continue
+		
+		# Find highest and lowest perceived influence edges
+		var highest_id: String = ""
+		var highest_perceived: float = -1.0
+		var lowest_id: String = ""
+		var lowest_perceived: float = 101.0
+		
+		for source_id in perceived_influences:
+			var perceived = perceived_influences[source_id]
+			if perceived > highest_perceived:
+				highest_perceived = perceived
+				highest_id = source_id
+			if perceived < lowest_perceived:
+				lowest_perceived = perceived
+				lowest_id = source_id
+		
+		if highest_id == "" or lowest_id == "" or highest_id == lowest_id:
+			continue
+		
+		# Reduce weight of highest-influence edge by 25%
+		var old_high_weight = edges[highest_id][inst_id]
+		var reduction = old_high_weight * MORPH_PERCENT
+		var new_high_weight = clamp(old_high_weight - reduction, 0.05, 1.0)
+		edges[highest_id][inst_id] = new_high_weight
+		
+		# Increase weight of lowest-influence edge by the same amount (25% of original high weight)
+		var old_low_weight = edges[lowest_id][inst_id]
+		var new_low_weight = clamp(old_low_weight + reduction, 0.0, 1.0)
+		edges[lowest_id][inst_id] = new_low_weight
+		
+		print("  [MORPH] %s: Reduced %s->%s (%.3f -> %.3f, perceived DS: %.1f)" % [
+			inst_id, highest_id, inst_id, old_high_weight, new_high_weight, highest_perceived
+		])
+		print("  [MORPH] %s: Increased %s->%s (%.3f -> %.3f, perceived DS: %.1f)" % [
+			inst_id, lowest_id, inst_id, old_low_weight, new_low_weight, lowest_perceived
+		])
+		changes_made += 2
+	
+	print("[DependencyGraph] Graph morphing made %d edge changes" % changes_made)
+
+## Calculate perceived deep state influence based on exposure level
+## High exposure = accurate perception, Low exposure = random/noisy perception
+func _calculate_perceived_influence(actual_influence: float, exposure: float) -> float:
+	# Accuracy factor: 0.0 (completely random) to 1.0 (perfectly accurate)
+	var accuracy = exposure / 100.0
+	
+	# Random noise inversely proportional to exposure
+	var noise_range = 50.0 * (1.0 - accuracy)  # 0-50 noise at low exposure
+	var noise = randf_range(-noise_range, noise_range)
+	
+	# Perceived = weighted average of actual and random + noise
+	var random_guess = randf_range(0.0, 100.0)
+	var perceived = (actual_influence * accuracy) + (random_guess * (1.0 - accuracy)) + noise
+	
+	return clamp(perceived, 0.0, 100.0)
+
+## Rewire dependencies after crisis resolution (LEGACY - kept for compatibility)
 ## Institutions ALWAYS attempt to improve resilience after a crisis
 func rewire_for_resilience(inst_manager: InstitutionManager) -> void:
 	print("[DependencyGraph] === REWIRING FOR RESILIENCE ===")

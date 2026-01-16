@@ -18,16 +18,22 @@ signal event_queue_changed()  # NEW: Emitted when event queue changes
 var inst_manager: InstitutionManager
 var player_state: PlayerState
 var tension_mgr: TensionManager
+var clock: SimulationClock  # Direct reference to clock for current_day
 var institution_configs: Dictionary = {}  # Reference to configs from SimulationRoot
 var save_state: RegionSaveState  # Reference to save state
 
-# Pending events map for UI consumption
+# Pending events map for UI consumption (DEPRECATED - use decision_queue instead)
 # Structure: { event_key: institution } where event_key contains event data
 # For crisis events, institution is null
 var pending_events: Dictionary = {}
 
 # Crisis events queue (separate from regular events)
 var pending_crisis_events: Array = []
+
+# NEW: Decision queue for events requiring player choices
+# Events are added silently (effects applied immediately) and shown one-by-one
+# Structure: Array of { "event": Dictionary, "type": EventType, "inst_id": String, "institution": Institution or null }
+var decision_queue: Array = []
 
 # Queued effects to be applied at next day start
 # Structure: Array of { "effects": Dictionary, "institution": Institution or null, "source": String }
@@ -259,6 +265,11 @@ func get_default_actions(institution: Institution) -> Array:
 ## Execute a default action on an institution
 ## Returns true if successful, false if failed (can't afford, locked, etc.)
 func execute_default_action(action: Dictionary, institution: Institution) -> bool:
+	# Check if action limit reached for today
+	if not institution.can_take_action():
+		print("[EventManager] Action limit reached for %s today (max %d per day)" % [institution.institution_name, institution.MAX_ACTIONS_PER_DAY])
+		return false
+	
 	# Check if action is unlocked
 	var required_inf = action.get("required_influence", 0)
 	if institution.player_influence < required_inf:
@@ -274,6 +285,9 @@ func execute_default_action(action: Dictionary, institution: Institution) -> boo
 	
 	# Spend cost
 	_spend_cost(cost)
+	
+	# Record action taken on this institution
+	institution.record_action_taken()
 	
 	# Apply effects to institution
 	var effects = action.get("effects", {})
@@ -427,14 +441,18 @@ func apply_autonomous_event_effects(institution: Institution) -> void:
 # ============================================
 
 ## Collect all day-start events from all institutions and crisis tree
-## Called on day start, populates pending_events for UI
-## Events apply their base effects IMMEDIATELY to the dependency graph
-## Player only sees and responds to events after day advances
+## NEW LOGIC:
+## 1. Stress events (stress >= strength): Apply effects SILENTLY to graph (no decision popup)
+## 2. Push ONE autonomous/random event to decision_queue for player choice
+## 3. Crisis events still go to pending_crisis_events for emergency popup
 func collect_day_start_events(institutions: Array, region_config: RegionConfig) -> Dictionary:
 	pending_events.clear()
 	pending_crisis_events.clear()
+	# Don't clear decision_queue here - it persists across days until resolved
 	
 	print("[EventManager] === COLLECTING DAY START EVENTS ===")
+	
+	var random_events_pool: Array = []  # Pool of possible random events for autonomous selection
 	
 	# Check each institution for stress and random events
 	for inst in institutions:
@@ -454,34 +472,36 @@ func collect_day_start_events(institutions: Array, region_config: RegionConfig) 
 		var random_tree_state = save_state.get_random_tree_state(inst.institution_id) if save_state else {"current_node": "", "pruned_branches": []}
 		
 		# Check stress-triggered event (stress >= strength)
+		# SILENT: Apply effects immediately, NO popup (graph effects only)
 		if config.should_trigger_stress_event(inst.stress, inst.strength):
 			var stress_event = config.get_current_stress_event(
 				stress_tree_state.get("current_node", ""),
 				stress_tree_state.get("pruned_branches", [])
 			)
 			if not stress_event.is_empty():
-				# Check node conditions
 				if config.check_node_conditions(stress_event, inst_state):
+					print("  [%s] STRESS EVENT (SILENT): %s" % [inst.institution_name, stress_event.get("title", "?")])
+					
+					# SILENT: Apply base event effects to dependency graph
+					var base_effects = stress_event.get("effects", {})
+					if not base_effects.is_empty():
+						apply_effects(base_effects, inst)
+						print("  -> Applied silent graph effects: %s" % str(base_effects))
+					
+					# Apply exposure increase when stress event triggers
+					apply_event_triggered_exposure(inst)
+					# Apply autonomous effects based on capacity
+					apply_autonomous_event_effects(inst)
+					
+					# Track in pending_events for backwards compatibility
 					var event_key = {
 						"event": stress_event,
 						"type": EventType.STRESS,
 						"inst_id": inst.institution_id
 					}
 					pending_events[event_key] = inst
-					print("  [%s] STRESS EVENT: %s" % [inst.institution_name, stress_event.get("title", "?")])
-					
-					# IMMEDIATE: Apply base event effects to dependency graph
-					var base_effects = stress_event.get("effects", {})
-					if not base_effects.is_empty():
-						apply_effects(base_effects, inst)
-						print("  -> Applied immediate effects: %s" % str(base_effects))
-					
-					# Apply exposure increase when stress event triggers
-					apply_event_triggered_exposure(inst)
-					# Apply autonomous effects based on capacity
-					apply_autonomous_event_effects(inst)
 		
-		# Check randomly-triggered event (probability based on capacity)
+		# Collect random events into pool for autonomous selection
 		if config.should_trigger_random_event(inst.capacity):
 			var random_event = config.get_current_random_event(
 				random_tree_state.get("current_node", ""),
@@ -489,28 +509,62 @@ func collect_day_start_events(institutions: Array, region_config: RegionConfig) 
 			)
 			if not random_event.is_empty():
 				if config.check_node_conditions(random_event, inst_state):
-					var event_key = {
+					random_events_pool.append({
 						"event": random_event,
-						"type": EventType.RANDOM,
-						"inst_id": inst.institution_id
-					}
-					pending_events[event_key] = inst
-					print("  [%s] RANDOM EVENT: %s (prob: %.1f%%)" % [
-						inst.institution_name, 
-						random_event.get("title", "?"),
-						config.get_random_trigger_probability(inst.capacity) * 100
-					])
-					
-					# IMMEDIATE: Apply base event effects to dependency graph
-					var base_effects = random_event.get("effects", {})
-					if not base_effects.is_empty():
-						apply_effects(base_effects, inst)
-						print("  -> Applied immediate effects: %s" % str(base_effects))
-					
-					# Apply exposure increase when random event triggers
-					apply_event_triggered_exposure(inst)
-					# Apply autonomous effects based on capacity
-					apply_autonomous_event_effects(inst)
+						"institution": inst,
+						"probability": config.get_random_trigger_probability(inst.capacity)
+					})
+	
+	# Push ONE random/autonomous event to decision queue
+	if not random_events_pool.is_empty():
+		# Weight selection by probability
+		var total_weight = 0.0
+		for evt in random_events_pool:
+			total_weight += evt["probability"]
+		
+		var roll = randf() * total_weight
+		var accumulated = 0.0
+		var selected_event = null
+		
+		for evt in random_events_pool:
+			accumulated += evt["probability"]
+			if roll <= accumulated:
+				selected_event = evt
+				break
+		
+		if selected_event == null:
+			selected_event = random_events_pool[0]
+		
+		var inst = selected_event["institution"]
+		var random_event = selected_event["event"]
+		
+		print("  [%s] AUTONOMOUS EVENT -> QUEUE: %s" % [inst.institution_name, random_event.get("title", "?")])
+		
+		# Apply immediate graph effects
+		var base_effects = random_event.get("effects", {})
+		if not base_effects.is_empty():
+			apply_effects(base_effects, inst)
+			print("  -> Applied immediate effects: %s" % str(base_effects))
+		
+		# Apply exposure increase
+		apply_event_triggered_exposure(inst)
+		
+		# Add to decision queue (player will see popup with choices)
+		var queue_entry = {
+			"event": random_event,
+			"type": EventType.RANDOM,
+			"inst_id": inst.institution_id,
+			"institution": inst
+		}
+		decision_queue.append(queue_entry)
+		
+		# Also track in pending_events for backwards compatibility
+		var event_key = {
+			"event": random_event,
+			"type": EventType.RANDOM,
+			"inst_id": inst.institution_id
+		}
+		pending_events[event_key] = inst
 	
 	# Check global crisis event (tension >= threshold) - SEPARATE QUEUE
 	if tension_mgr and region_config:
@@ -540,7 +594,11 @@ func collect_day_start_events(institutions: Array, region_config: RegionConfig) 
 				# Emit crisis signal
 				crisis_triggered.emit(pending_crisis_events)
 	
-	print("[EventManager] Collected %d regular events, %d crisis events" % [pending_events.size(), pending_crisis_events.size()])
+	print("[EventManager] Silent stress events: %d, Decision queue: %d, Crisis events: %d" % [
+		pending_events.size() - decision_queue.size(),
+		decision_queue.size(),
+		pending_crisis_events.size()
+	])
 	event_queue_changed.emit()
 	events_ready.emit(pending_events)
 	return pending_events
@@ -548,6 +606,139 @@ func collect_day_start_events(institutions: Array, region_config: RegionConfig) 
 ## Get all pending crisis events
 func get_pending_crisis_events() -> Array:
 	return pending_crisis_events
+
+## Get the decision queue (events requiring player choices)
+func get_decision_queue() -> Array:
+	return decision_queue
+
+## Get the size of the decision queue
+func get_decision_queue_size() -> int:
+	return decision_queue.size()
+
+## Check if there are events in the decision queue
+func has_pending_decisions() -> bool:
+	return not decision_queue.is_empty()
+
+## Get the next event from the decision queue (peek, doesn't remove)
+func peek_next_decision() -> Dictionary:
+	if decision_queue.is_empty():
+		return {}
+	return decision_queue[0]
+
+## Resolve the next event in the decision queue with a player choice
+## Applies choice effects IMMEDIATELY (not delayed) and pops from queue
+func resolve_queue_decision(choice_index: int) -> Dictionary:
+	if decision_queue.is_empty():
+		push_warning("[EventManager] No events in decision queue")
+		return {}
+	
+	var queue_entry = decision_queue[0]
+	var event_node = queue_entry.get("event", {})
+	var event_type = queue_entry.get("type", EventType.RANDOM)
+	var inst_id = queue_entry.get("inst_id", "")
+	var institution = queue_entry.get("institution")
+	
+	var node_id = event_node.get("node_id", "")
+	var choices = event_node.get("choices", [])
+	
+	print("[EventManager] === RESOLVING QUEUED DECISION ===")
+	print("[EventManager] Event: %s" % event_node.get("title", "?"))
+	print("[EventManager] Queue position: 1/%d" % decision_queue.size())
+	
+	if choice_index < 0 or choice_index >= choices.size():
+		push_warning("[EventManager] Invalid choice index: %d" % choice_index)
+		return {}
+	
+	var choice = choices[choice_index]
+	print("[EventManager] Choice: %s" % choice.get("text", "?"))
+	
+	# Check cost
+	var cost = choice.get("cost", {})
+	if not _can_afford(cost):
+		push_warning("[EventManager] Cannot afford choice cost")
+		return {"error": "cannot_afford"}
+	
+	# Spend cost (costs apply immediately)
+	_spend_cost(cost)
+	
+	# IMMEDIATE EFFECTS: Apply choice effects NOW (not delayed)
+	var choice_effects = choice.get("effects", {})
+	var effects_applied = {}
+	if not choice_effects.is_empty():
+		# Apply to institution if available
+		if institution:
+			apply_effects(choice_effects, institution)
+		else:
+			_apply_global_effects(choice_effects)
+		effects_applied = choice_effects
+		print("[EventManager] Applied immediate choice effects: %s" % str(choice_effects))
+	
+	# Auto-adjust influence based on player response
+	if institution:
+		var influence_change = _calculate_event_influence_change(choice, event_type)
+		if influence_change != 0:
+			institution.increase_influence(influence_change)
+			print("[EventManager] Influence changed by %+.1f" % influence_change)
+	
+	# Update tree state in save
+	if save_state:
+		match event_type:
+			EventType.STRESS:
+				save_state.record_stress_event(inst_id, node_id, choice)
+			EventType.RANDOM:
+				save_state.record_random_event(inst_id, node_id, choice)
+	
+	# Get current day for history
+	var current_day = clock.get_current_day() if clock else 0
+	
+	# Add to event history
+	event_history.append({
+		"event": event_node,
+		"institution_id": inst_id,
+		"choice": choice,
+		"day": current_day,
+		"type": event_type
+	})
+	
+	# Pop from queue
+	decision_queue.remove_at(0)
+	event_queue_changed.emit()
+	event_resolved.emit(node_id)
+	
+	print("[EventManager] Decision resolved, %d decisions remaining" % decision_queue.size())
+	
+	return {
+		"event": event_node,
+		"choice": choice,
+		"effects_applied": effects_applied,
+		"remaining": decision_queue.size()
+	}
+
+## Skip the current queued decision (do nothing)
+func skip_queue_decision() -> Dictionary:
+	if decision_queue.is_empty():
+		push_warning("[EventManager] No events in decision queue")
+		return {}
+	
+	var queue_entry = decision_queue[0]
+	var event_node = queue_entry.get("event", {})
+	
+	print("[EventManager] Skipping queued decision: %s" % event_node.get("title", "?"))
+	
+	# Pop from queue without applying effects
+	decision_queue.remove_at(0)
+	event_queue_changed.emit()
+	
+	return {
+		"event": event_node,
+		"skipped": true,
+		"remaining": decision_queue.size()
+	}
+
+## Clear the entire decision queue
+func clear_decision_queue() -> void:
+	decision_queue.clear()
+	event_queue_changed.emit()
 
 # Reference to dependency graph (set by SimulationRoot)
 var dep_graph: DependencyGraph
@@ -594,20 +785,23 @@ func resolve_crisis_event(crisis_index: int, choice_index: int) -> void:
 	if not choice_effects.is_empty():
 		queue_delayed_effects(choice_effects, null, "Crisis Choice: %s" % choice.get("text", "?"))
 	
-	# After crisis resolution, rewire graph for resilience
-	if dep_graph and inst_manager:
-		dep_graph.rewire_for_resilience(inst_manager)
+	# After crisis resolution, morph graph based on perceived deep state influence
+	if dep_graph and inst_manager and player_state:
+		dep_graph.morph_after_crisis(player_state.exposure, inst_manager)
 	
 	# Update tree state
 	if save_state:
 		save_state.record_crisis_event(node_id, choice)
 	
 	# Add to history
+	# Get current day safely
+	var current_day = clock.get_current_day() if clock else 0
+	
 	event_history.append({
 		"event": event_node,
 		"institution_id": "",
 		"choice": choice,
-		"day": inst_manager.get_parent().get_node("SimulationClock").current_day if inst_manager else 0,
+		"day": current_day,
 		"type": EventType.CRISIS
 	})
 	
@@ -694,11 +888,7 @@ func resolve_event(event_key: Dictionary, choice_index: int) -> void:
 				save_state.record_crisis_event(node_id, choice)
 	
 	# Add to event history
-	var current_day = 0
-	if inst_manager and inst_manager.get_parent():
-		var clock = inst_manager.get_parent().get_node_or_null("SimulationClock")
-		if clock:
-			current_day = clock.current_day
+	var current_day = clock.get_current_day() if clock else 0
 	
 	event_history.append({
 		"event": event_node,
