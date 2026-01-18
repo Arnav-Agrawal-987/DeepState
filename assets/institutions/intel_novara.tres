@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1")
 institution_id = "intelligence"
-institution_name = "State Security Bureau"
+institution_name = "Intelligence Bureau"
 institution_type = 3
 initial_capacity = 65.0
 initial_strength = 85.0

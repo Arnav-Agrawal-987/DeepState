@@ -1,9 +1,14 @@
-[gd_scene load_steps=2 format=3 uid="uid://dml8u7j8u8yw"]
+[gd_scene load_steps=4 format=3 uid="uid://dml8u7j8u8yw"]
 
 [ext_resource type="Script" uid="uid://cab377jsxru4p" path="res://scenes/simulation/institution_card.gd" id="1_card_script"]
+[ext_resource type="FontFile" uid="uid://b1wr46em0yl2k" path="res://assets/fonts/STENCIL.TTF" id="2_alp0a"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_qfbhy"]
 
 [node name="InstitutionCard" type="PanelContainer"]
-custom_minimum_size = Vector2(900, 450)
+offset_right = 612.0
+offset_bottom = 249.0
+theme_override_styles/panel = SubResource("StyleBoxEmpty_qfbhy")
 script = ExtResource("1_card_script")
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
@@ -21,10 +26,13 @@ layout_mode = 2
 
 [node name="InstitutionName" type="Label" parent="MarginContainer/VBoxContainer/HeaderHBox"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("2_alp0a")
 theme_override_font_sizes/font_size = 48
 text = "Institution Name"
 
 [node name="InstitutionType" type="Label" parent="MarginContainer/VBoxContainer/HeaderHBox"]
+visible = false
 layout_mode = 2
 size_flags_horizontal = 10
 theme_override_font_sizes/font_size = 36
@@ -36,41 +44,57 @@ columns = 2
 
 [node name="CapacityLabel" type="Label" parent="MarginContainer/VBoxContainer/StatsContainer"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("2_alp0a")
 theme_override_font_sizes/font_size = 28
 text = "Capacity"
 
 [node name="CapacityBar" type="ProgressBar" parent="MarginContainer/VBoxContainer/StatsContainer"]
 custom_minimum_size = Vector2(400, 30)
 layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("2_alp0a")
 value = 50.0
 
 [node name="StrengthLabel" type="Label" parent="MarginContainer/VBoxContainer/StatsContainer"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("2_alp0a")
 theme_override_font_sizes/font_size = 28
 text = "Strength"
 
 [node name="StrengthBar" type="ProgressBar" parent="MarginContainer/VBoxContainer/StatsContainer"]
 custom_minimum_size = Vector2(400, 30)
 layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("2_alp0a")
 value = 100.0
 
 [node name="StressLabel" type="Label" parent="MarginContainer/VBoxContainer/StatsContainer"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("2_alp0a")
 theme_override_font_sizes/font_size = 28
 text = "Stress"
 
 [node name="StressBar" type="ProgressBar" parent="MarginContainer/VBoxContainer/StatsContainer"]
 custom_minimum_size = Vector2(400, 30)
 layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("2_alp0a")
 
 [node name="InfluenceLabel" type="Label" parent="MarginContainer/VBoxContainer/StatsContainer"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("2_alp0a")
 theme_override_font_sizes/font_size = 28
 text = "Influence"
 
 [node name="InfluenceBar" type="ProgressBar" parent="MarginContainer/VBoxContainer/StatsContainer"]
 custom_minimum_size = Vector2(400, 30)
 layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("2_alp0a")
 
 [node name="ActionsHBox" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
 layout_mode = 2

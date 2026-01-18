@@ -1,45 +1,22 @@
 [gd_scene load_steps=2 format=3 uid="uid://dgmhh1y8w5ry"]
 
-[ext_resource type="Script" path="res://src/ui/world_map.gd" id="1_h5xyc"]
+[ext_resource type="Script" uid="uid://xtqu57vwamxb" path="res://src/ui/world_map.gd" id="1_h5xyc"]
 
 [node name="WorldMap" type="Control"]
 layout_mode = 3
-anchors_left = 0.0
-anchors_top = 0.0
-anchors_right = 1.0
-anchors_bottom = 1.0
-offset_right = 0.0
-offset_bottom = 0.0
+anchors_preset = 0
 script = ExtResource("1_h5xyc")
 
 [node name="TitleLabel" type="Label" parent="."]
 layout_mode = 1
-anchors_left = 0.0
-anchors_top = 0.0
-anchors_right = 1.0
-anchors_bottom = 0.1
-offset_right = 0.0
-offset_bottom = 0.0
 text = "Select Region"
 horizontal_alignment = 1
 
 [node name="RegionContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
-anchors_left = 0.1
-anchors_top = 0.2
-anchors_right = 0.9
-anchors_bottom = 0.9
-offset_right = 0.0
-offset_bottom = 0.0
 
 [node name="RegionInfoPanel" type="PanelContainer" parent="."]
 layout_mode = 1
-anchors_left = 0.0
-anchors_top = 0.85
-anchors_right = 1.0
-anchors_bottom = 1.0
-offset_right = 0.0
-offset_bottom = 0.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="RegionInfoPanel"]
 layout_mode = 2
@@ -50,14 +27,12 @@ text = "Select a region to begin"
 
 [node name="RegionDescription" type="Label" parent="RegionInfoPanel/VBoxContainer"]
 layout_mode = 2
-text = ""
 text_overrun_behavior = 3
 
 [node name="RegionStats" type="Label" parent="RegionInfoPanel/VBoxContainer"]
 layout_mode = 2
-text = ""
 
 [node name="StartButton" type="Button" parent="RegionInfoPanel/VBoxContainer"]
 layout_mode = 2
-text = "Start Game"
 disabled = true
+text = "Start Game"

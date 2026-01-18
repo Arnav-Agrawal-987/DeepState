@@ -28,20 +28,26 @@ class_name SimulationRoot
 
 @onready var pause_menu = $SimulationUI/PauseMenu
 @onready var console_label = $SimulationUI/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ConsoleLabel
+@onready var end_day_btn = $SimulationUI/MainLayout/EndDayButton
 
 @onready var event_tree = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/EventTreePanel/EventTreeScroll/EventTree
 @onready var institution_select = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/TreeTypeHBox/InstitutionSelect
 @onready var tree_type_select = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/TreeTypeHBox/TreeTypeSelect
 @onready var menu_button = $SimulationUI/MainLayout/MenuButton
 
+# Quick access buttons for selecting institutions in the Actions panel
+@onready var media_button = $SimulationUI/MainLayout/MediaButton
+@onready var army_button = $SimulationUI/MainLayout/ArmyButton
+@onready var intelligence_button = $SimulationUI/MainLayout/IntelligenceButton
+
 # NEW: Event Queue and Crisis View UI
 @onready var view_crisis_btn = $SimulationUI/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer/ViewCrisisBtn
-@onready var event_queue_btn = $SimulationUI/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer/EventQueueBtn
+@onready var event_queue_btn = $SimulationUI/MainLayout/DailyNewsButton
 @onready var relevance_label = $SimulationUI/MarginContainer/MainVBox/PlayerDashboard/VBoxContainer/HBoxContainer/RelevanceLabel
 
-@onready var event_queue_overlay = $SimulationUI/EventQueueOverlay
-@onready var event_queue_list = $SimulationUI/EventQueueOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/QueueScroll/QueueList
-@onready var close_queue_btn = $SimulationUI/EventQueueOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/CloseQueueBtn
+@onready var event_queue_overlay = $SimulationUI/DailyNews
+@onready var event_queue_list = $SimulationUI/DailyNews/DailyNewsControl/QueueScroll/QueueList
+@onready var close_queue_btn = $SimulationUI/DailyNews/DailyNewsControl/CloseButton
 
 @onready var crisis_view_overlay = $SimulationUI/CrisisViewOverlay
 @onready var crisis_view_relevance = $SimulationUI/CrisisViewOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/RelevanceLabel
@@ -49,9 +55,8 @@ class_name SimulationRoot
 @onready var close_crisis_btn = $SimulationUI/CrisisViewOverlay/CenterContainer/PanelContainer/MarginContainer/VBoxContainer/CloseCrisisBtn
 
 # NEW: Default Actions UI
-@onready var default_actions_panel = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel
-@onready var action_inst_select = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel/ActionsVBox/ActionInstSelect
-@onready var actions_container = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/DefaultActionsPanel/ActionsVBox/ActionsContainer
+@onready var action_inst_select = $SimulationUI/MainLayout/ActionListBG/ActionsVBox/ActionInstSelect
+@onready var actions_container = $SimulationUI/MainLayout/ActionListBG/ActionsVBox/ActionsContainer
 
 var region_config: RegionConfig
 var save_state: RegionSaveState
@@ -426,7 +431,7 @@ func _create_fallback_test_region() -> void:
 
 ## Setup UI and populate institution cards
 func _setup_ui() -> void:
-	var institution_panel = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/LeftPanel/InstitutionPanel/ScrollContainer/VBoxContainer
+	var institution_panel = $SimulationUI/MainLayout/InstitutionListBG/ScrollContainer/VBoxContainer
 	var institution_card_scene = preload("res://scenes/simulation/institution_card.tscn")
 	
 	for inst in inst_manager.get_all_institutions():
@@ -451,6 +456,16 @@ func _setup_ui() -> void:
 		close_queue_btn.pressed.connect(_on_close_queue_pressed)
 	if close_crisis_btn:
 		close_crisis_btn.pressed.connect(_on_close_crisis_pressed)
+	if end_day_btn:
+		end_day_btn.pressed.connect(_on_advance_day)
+
+	# Connect quick-select institution buttons (MainLayout)
+	if media_button:
+		media_button.pressed.connect(_on_media_button_pressed)
+	if army_button:
+		army_button.pressed.connect(_on_army_button_pressed)
+	if intelligence_button:
+		intelligence_button.pressed.connect(_on_intelligence_button_pressed)
 	
 	# Setup default actions panel
 	_setup_default_actions_ui()
@@ -516,6 +531,8 @@ func _refresh_default_actions() -> void:
 	# Create buttons for each action
 	for action in all_actions:
 		var button = Button.new()
+		button.add_theme_font_size_override("font_size", 24)
+		button.add_theme_color_override("font_color", Color(0, 0, 0))
 		var title = action.get("title", "Unknown")
 		var cost = action.get("cost", {})
 		var required_inf = action.get("required_influence", 0)
@@ -601,6 +618,30 @@ func _update_queue_buttons() -> void:
 func _on_view_crisis_pressed() -> void:
 	_show_crisis_view()
 
+
+## Quick-select handlers for main layout buttons
+func _select_action_inst_by_name(name: String) -> void:
+	if not action_inst_select:
+		return
+	# Iterate items and select matching text
+	for i in range(action_inst_select.item_count):
+		var item_text = action_inst_select.get_item_text(i)
+		if item_text == name:
+			action_inst_select.select(i)
+			_refresh_default_actions()
+			_log_console("Selected institution for actions: %s" % name)
+			return
+	_log_console("Institution not found in actions list: %s" % name)
+
+func _on_media_button_pressed() -> void:
+	_select_action_inst_by_name("State Media")
+
+func _on_army_button_pressed() -> void:
+	_select_action_inst_by_name("Armed Forces")
+
+func _on_intelligence_button_pressed() -> void:
+	_select_action_inst_by_name("Intelligence Bureau")
+
 ## Handle Event Queue button
 func _on_event_queue_pressed() -> void:
 	_show_event_queue()
@@ -635,24 +676,29 @@ func _show_event_queue() -> void:
 			var panel = PanelContainer.new()
 			var vbox = VBoxContainer.new()
 			panel.add_child(vbox)
+			panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 			
 			# Title
 			var title_label = Label.new()
 			var type_str = EventManager.EventType.keys()[event_type]
 			var inst_name = institution.institution_name if institution else "Global"
 			title_label.text = "[%s] %s" % [type_str, event_data.get("title", "Unknown")]
-			title_label.add_theme_font_size_override("font_size", 14)
+			title_label.add_theme_font_size_override("font_size", 32)
+			title_label.modulate = Color(0, 0, 0)
 			vbox.add_child(title_label)
 			
 			# Institution
 			var inst_label = Label.new()
 			inst_label.text = "Institution: %s" % inst_name
-			inst_label.modulate = Color(0.7, 0.7, 0.7)
+			inst_label.add_theme_font_size_override("font_size", 24)
+			inst_label.modulate = Color(0, 0, 0)
 			vbox.add_child(inst_label)
 			
 			# Description
 			var desc_label = Label.new()
 			desc_label.text = event_data.get("description", "")
+			desc_label.add_theme_font_size_override("font_size", 24)
+			desc_label.modulate = Color(0, 0, 0)
 			desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			vbox.add_child(desc_label)
 			
@@ -664,14 +710,8 @@ func _show_event_queue() -> void:
 				for key in effects:
 					effects_parts.append("%s: %+d" % [key, effects[key]])
 				effects_label.text = "Effects (applied): " + ", ".join(effects_parts)
-				effects_label.modulate = Color(0.5, 0.7, 1.0)
+				effects_label.modulate = Color(0, 0, 0)
 				vbox.add_child(effects_label)
-			
-			# Respond button
-			var respond_btn = Button.new()
-			respond_btn.text = "Respond to Event"
-			respond_btn.pressed.connect(_on_queue_event_respond.bind(event_key))
-			vbox.add_child(respond_btn)
 			
 			event_queue_list.add_child(panel)
 	
@@ -752,6 +792,7 @@ func _show_crisis_view() -> void:
 				for j in range(choices.size()):
 					var choice = choices[j]
 					var choice_btn = Button.new()
+					choice_btn.add_theme_font_size_override("font_size", 24)
 					choice_btn.text = choice.get("text", "Option %d" % (j + 1))
 					choice_btn.tooltip_text = _format_choice_tooltip(choice)
 					choice_btn.pressed.connect(_on_crisis_choice_selected.bind(i, j))
@@ -1113,6 +1154,7 @@ func show_event_dialog(event_node: Dictionary, institution: Institution, choices
 		# No choices - add skip/acknowledge button that works with queue
 		event_close_btn.visible = false
 		var ack_btn = Button.new()
+		ack_btn.add_theme_font_size_override("font_size", 24)
 		ack_btn.custom_minimum_size = Vector2(0, 40)
 		ack_btn.text = "Acknowledge"
 		ack_btn.pressed.connect(_on_event_skip)
@@ -1125,6 +1167,7 @@ func show_event_dialog(event_node: Dictionary, institution: Institution, choices
 		for i in range(choices.size()):
 			var choice = choices[i]
 			var btn = Button.new()
+			btn.add_theme_font_size_override("font_size", 24)
 			btn.custom_minimum_size = Vector2(0, 40)
 			
 			# Support both "label" and "text" keys for backwards compatibility
@@ -1159,6 +1202,7 @@ func show_event_dialog(event_node: Dictionary, institution: Institution, choices
 		# Add "Do Nothing" option if no choices are affordable
 		if not any_affordable:
 			var skip_btn = Button.new()
+			skip_btn.add_theme_font_size_override("font_size", 24)
 			skip_btn.custom_minimum_size = Vector2(0, 40)
 			skip_btn.text = "Do Nothing (Skip)"
 			skip_btn.pressed.connect(_on_event_skip)
@@ -1316,7 +1360,7 @@ func _connect_debug_buttons() -> void:
 	var button_row2 = $SimulationUI/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ButtonRow2
 
 	var buttons_row1 := {
-		"AdvanceDayBtn": _on_debug_advance_day,
+		"AdvanceDayBtn": _on_advance_day,
 		"AddStressBtn": _on_debug_add_stress,
 		"AddTensionBtn": _on_debug_add_tension,
 	}
@@ -1349,7 +1393,7 @@ func _connect_debug_buttons() -> void:
 ## 3. Collect events silently (stress effects applied, random event queued)
 ## 4. Show decision popups from queue (blocking)
 ## 5. After ALL decisions resolved -> daily updates + event tree refresh
-func _on_debug_advance_day() -> void:
+func _on_advance_day() -> void:
 	var insts = inst_manager.get_all_institutions()
 	
 	# Step 0: Increment day first (events happen at START of new day)
@@ -1638,6 +1682,7 @@ func _show_emergency_crisis_popup(crisis_event: Dictionary, epicenter: Instituti
 	if choices.is_empty():
 		# No choices - auto-resolve
 		var close_btn = Button.new()
+		close_btn.add_theme_font_size_override("font_size", 24)
 		close_btn.text = "Acknowledge Crisis"
 		close_btn.pressed.connect(_on_crisis_acknowledged.bind(crisis_event, epicenter))
 		crisis_choices_container.add_child(close_btn)
@@ -1647,6 +1692,7 @@ func _show_emergency_crisis_popup(crisis_event: Dictionary, epicenter: Instituti
 		for i in range(choices.size()):
 			var choice = choices[i]
 			var choice_btn = Button.new()
+			choice_btn.add_theme_font_size_override("font_size", 24)
 			
 			# Check affordability
 			var cost = choice.get("cost", {})
@@ -1670,6 +1716,7 @@ func _show_emergency_crisis_popup(crisis_event: Dictionary, epicenter: Instituti
 		# Add skip option if no choices are affordable
 		if not any_affordable:
 			var skip_btn = Button.new()
+			skip_btn.add_theme_font_size_override("font_size", 24)
 			skip_btn.text = "Do Nothing (Skip Crisis Response)"
 			skip_btn.pressed.connect(_on_crisis_skip.bind(crisis_event, epicenter))
 			crisis_choices_container.add_child(skip_btn)

@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_govt")
 institution_id = "govt_novara"
-institution_name = "Government of Novara"
+institution_name = "Government"
 institution_type = 2
 initial_capacity = 60.0
 initial_strength = 100.0
