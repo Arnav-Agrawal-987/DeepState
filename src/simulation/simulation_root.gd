@@ -29,6 +29,7 @@ class_name SimulationRoot
 @onready var pause_menu = $SimulationUI/PauseMenu
 @onready var console_label = $SimulationUI/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ConsoleLabel
 @onready var end_day_btn = $SimulationUI/MainLayout/EndDayButton
+@onready var buy_bandwidth_btn = $SimulationUI/MainLayout/BuyBandwidthButton
 
 @onready var event_tree = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/EventTreePanel/EventTreeScroll/EventTree
 @onready var institution_select = $SimulationUI/MarginContainer/MainVBox/ContentHSplit/RightPanel/TreeTypeHBox/InstitutionSelect
@@ -458,6 +459,8 @@ func _setup_ui() -> void:
 		close_crisis_btn.pressed.connect(_on_close_crisis_pressed)
 	if end_day_btn:
 		end_day_btn.pressed.connect(_on_advance_day)
+	if buy_bandwidth_btn:
+		buy_bandwidth_btn.pressed.connect(_on_convert_cash_to_bw)
 
 	# Connect quick-select institution buttons (MainLayout)
 	if media_button:
@@ -664,8 +667,9 @@ func _show_event_queue() -> void:
 	
 	if pending.is_empty():
 		var label = Label.new()
-		label.text = "No pending events"
-		label.modulate = Color(0.6, 0.6, 0.6)
+		label.text = "No News"
+		label.add_theme_font_size_override("font_size", 48)
+		label.modulate = Color(0, 0, 0)
 		event_queue_list.add_child(label)
 	else:
 		for event_key in pending:
@@ -1262,6 +1266,8 @@ func _on_event_choice_selected(choice_index: int) -> void:
 			for key in effects:
 				effect_lines.append("%s: %+.0f" % [key.replace("_", " ").capitalize(), effects[key]])
 			_log_console("Effects: %s" % ", ".join(effect_lines))
+			# Increase global tension based on effects
+			_increase_tension_from_effects(effects)
 		
 		var choice = result.get("choice", {})
 		var choice_label = choice.get("label", choice.get("text", "Unknown"))
@@ -1310,6 +1316,8 @@ func _on_event_choice_selected(choice_index: int) -> void:
 	# Apply effects to institution
 	if current_event_institution:
 		event_manager.apply_effects(effects, current_event_institution)
+		# Increase tension due to this event's effects
+		_increase_tension_from_effects(effects)
 	
 	# Update tree state with branching
 	if save_state and current_pending_event_node:
@@ -1354,6 +1362,23 @@ func _log_console(msg: String) -> void:
 		console_label.text = msg
 	print(msg)
 
+## Increase global tension based on effects applied by an event
+func _increase_tension_from_effects(effects: Dictionary) -> void:
+	if effects == null or typeof(effects) != TYPE_DICTIONARY or effects.is_empty():
+		return
+	# Sum magnitude of numeric effects (exclude explicit tension_change to avoid doubling)
+	var sum_mag: float = 0.0
+	for key in effects:
+		if key == "tension_change":
+			continue
+		var v = effects[key]
+		if typeof(v) == TYPE_INT or typeof(v) == TYPE_FLOAT:
+			sum_mag += abs(float(v))
+	# Compute tension increase (base + scaled by effect magnitude)
+	var amount = 1.0 + sum_mag * 0.1
+	tension_mgr.add_tension(amount)
+	_log_console("Tension increased: +%.1f" % amount)
+
 ## Connect debug buttons
 func _connect_debug_buttons() -> void:
 	var button_row1 = $SimulationUI/MarginContainer/MainVBox/DebugPanel/MarginContainer/VBoxContainer/ButtonRow1
@@ -1368,6 +1393,7 @@ func _connect_debug_buttons() -> void:
 	var buttons_row2 := {
 		"AddCashBtn": _on_debug_add_cash,
 		"AddBandwidthBtn": _on_debug_add_bandwidth,
+		"ConvertCashBtn": _on_convert_cash_to_bw,
 	}
 
 	for btn_name in buttons_row1.keys():
@@ -1451,6 +1477,10 @@ func _complete_day_after_decisions() -> void:
 const DAILY_INCOME_FACTOR: float = 0.0001  # Tunable constant for income (negligible for now)
 const DAILY_EXPOSURE_DECAY_FACTOR: float = 0.01  # Exposure decay per influence point (reduced)
 
+# Base daily resources (applied per-institution by type)
+const BASE_DAILY_CASH: float = 5.0
+const BASE_DAILY_BANDWIDTH: float = 3.0
+
 func _apply_daily_income(institutions: Array) -> void:
 	var total_cash_gain: float = 0.0
 	var total_bandwidth_gain: float = 0.0
@@ -1465,13 +1495,20 @@ func _apply_daily_income(institutions: Array) -> void:
 			Institution.InstitutionType.CIVILIAN:
 				# Civilian institutions generate cash
 				total_cash_gain += income
+				# Base cash per civilian inst
+				total_cash_gain += BASE_DAILY_CASH
 			Institution.InstitutionType.POLICY, Institution.InstitutionType.MILITANT:
 				# Political and Military institutions generate bandwidth
 				total_bandwidth_gain += income
+				# Base bandwidth per political/military inst
+				total_bandwidth_gain += BASE_DAILY_BANDWIDTH
 			Institution.InstitutionType.INTELLIGENCE:
 				# Intelligence generates both (half each)
 				total_cash_gain += income * 0.5
 				total_bandwidth_gain += income * 0.5
+				# Intelligence gives a smaller base for both
+				total_cash_gain += BASE_DAILY_CASH * 0.5
+				total_bandwidth_gain += BASE_DAILY_BANDWIDTH * 0.5
 		
 		# Exposure decays based on total influence (more influence = more exposure loss)
 		total_exposure_decay += influence * DAILY_EXPOSURE_DECAY_FACTOR
@@ -1540,6 +1577,8 @@ func _on_new_event_choice_selected(choice_index: int) -> void:
 			for key in effects:
 				effect_lines.append("%s: %+.0f" % [key.replace("_", " ").capitalize(), effects[key]])
 			_log_console("Effects: %s" % ", ".join(effect_lines))
+			# Increase global tension based on effects
+			_increase_tension_from_effects(effects)
 		
 		event_dialog.visible = false
 		
@@ -1934,6 +1973,29 @@ func _on_debug_add_cash() -> void:
 func _on_debug_add_bandwidth() -> void:
 	player_state.gain_bandwidth(25.0)
 	_log_console("Added 25 bandwidth (total: %.0f)" % player_state.bandwidth)
+	_update_dashboard()
+
+## Convert cash into bandwidth (debug button)
+const CASH_TO_BW_RATE_CASH_PER_BW: float = 10.0  # 10 cash -> 1 bandwidth
+
+func _on_convert_cash_to_bw() -> void:
+	# Convert up to 10% of player's cash or at least enough for one BW
+	var cash_available = player_state.cash
+	if cash_available < CASH_TO_BW_RATE_CASH_PER_BW:
+		_log_console("Not enough cash to convert")
+		return
+	# Determine how much to convert: use min(10% cash, enough to buy integer BW)
+	var convert_cash = max(floor(cash_available * 0.10), CASH_TO_BW_RATE_CASH_PER_BW)
+	# Round down to nearest multiple of rate
+	convert_cash = floor(convert_cash / CASH_TO_BW_RATE_CASH_PER_BW) * CASH_TO_BW_RATE_CASH_PER_BW
+	if convert_cash <= 0:
+		_log_console("Conversion amount too small")
+		return
+	var bw_gain = convert_cash / CASH_TO_BW_RATE_CASH_PER_BW
+	# Apply conversion
+	player_state.spend_cash(convert_cash)
+	player_state.gain_bandwidth(bw_gain)
+	_log_console("Converted $%d -> +%.0f BW" % [convert_cash, bw_gain])
 	_update_dashboard()
 
 ## Update dashboard labels

@@ -265,10 +265,8 @@ func get_default_actions(institution: Institution) -> Array:
 ## Execute a default action on an institution
 ## Returns true if successful, false if failed (can't afford, locked, etc.)
 func execute_default_action(action: Dictionary, institution: Institution) -> bool:
-	# Check if action limit reached for today
-	if not institution.can_take_action():
-		print("[EventManager] Action limit reached for %s today (max %d per day)" % [institution.institution_name, institution.MAX_ACTIONS_PER_DAY])
-		return false
+	# NOTE: Allow multiple actions per institution per day as long as the player can afford them.
+	# The previous per-day limit check was removed to permit multiple affordable actions.
 	
 	# Check if action is unlocked
 	var required_inf = action.get("required_influence", 0)
